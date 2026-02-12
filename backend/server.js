@@ -26,16 +26,6 @@ const __dirname = dirname(__filename);
 const app = express();
 app.use(express.json());
 
-// Allow preflight CORS requests for all routes
-app.options('*', cors());
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-});
-
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
@@ -68,13 +58,14 @@ app.use(helmet({
 // CORS configuration
 const corsOptions = {
   origin: true, // Allow all origins
-  credentials: false,
+  credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
 
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Compression middleware
 app.use(compression());

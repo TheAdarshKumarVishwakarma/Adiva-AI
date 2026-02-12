@@ -13,8 +13,8 @@ const userSettingsSchema = new mongoose.Schema({
   aiSettings: {
     defaultModel: {
       type: String,
-      default: 'gpt-4o-mini',
-      enum: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo', 'claude-sonnet-4-20250514', 'claude-haiku-3-20250514']
+      default: 'gpt-5-nano',
+      enum: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo',  'gpt-3.5-turbo', 'gpt-5-nano', 'claude-sonnet-4-20250514', 'claude-haiku-3-20250514']
     },
     defaultTemperature: {
       type: Number,
@@ -47,8 +47,8 @@ const userSettingsSchema = new mongoose.Schema({
   appearance: {
     theme: {
       type: String,
-      default: 'neural-blue',
-      enum: ['neural-blue', 'cyber-purple', 'matrix-green', 'fire-red', 'ice-blue', 'sunset-orange', 'midnight-dark', 'aurora-pink']
+      default: 'ocean',
+      enum: ['ocean', 'indigo', 'blue', 'green', 'purple', 'orange', 'teal', 'red', 'yellow']
     },
     sidebarThemeEnabled: {
       type: Boolean,
@@ -56,8 +56,13 @@ const userSettingsSchema = new mongoose.Schema({
     },
     language: {
       type: String,
-      default: 'en',
-      enum: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'ar', 'hi', 'nl']
+      default: 'en-US',
+      enum: ['en', 'en-US', 'en-GB', 'es-ES', 'fr-FR', 'de-DE', 'it-IT', 'pt-BR', 'ru-RU', 'ja-JP', 'ko-KR', 'zh-CN', 'hi-IN', 'ar-SA']
+    },
+    speechLanguage: {
+      type: String,
+      default: 'en-US',
+      enum: ['en', 'en-US', 'en-GB', 'es-ES', 'fr-FR', 'de-DE', 'it-IT', 'pt-BR', 'ru-RU', 'ja-JP', 'ko-KR', 'zh-CN', 'hi-IN', 'ar-SA']
     },
     highContrast: {
       type: Boolean,
@@ -177,7 +182,8 @@ userSettingsSchema.methods.resetToDefaults = function() {
   this.appearance = {
     theme: 'neural-blue',
     sidebarThemeEnabled: true,
-    language: 'en',
+    language: 'en-US',
+    speechLanguage: 'en-US',
     highContrast: false,
     largeText: false,
     reduceAnimations: false

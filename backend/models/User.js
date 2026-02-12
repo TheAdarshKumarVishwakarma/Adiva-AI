@@ -136,12 +136,6 @@ userSchema.methods.getSettings = async function() {
   return await UserSettings.getOrCreateUserSettings(this._id);
 };
 
-// Method to get user preferences
-userSchema.methods.getPreferences = async function() {
-  const UserPreferences = mongoose.model('UserPreferences');
-  return await UserPreferences.getOrCreateUserPreferences(this._id);
-};
-
 // Method to get user analytics
 userSchema.methods.getAnalytics = async function() {
   const UserAnalytics = mongoose.model('UserAnalytics');
@@ -167,9 +161,8 @@ userSchema.methods.createChat = async function(title, conversationId) {
 
 // Method to get user profile with all related data
 userSchema.methods.getFullProfile = async function() {
-  const [settings, preferences, analytics, recentChats] = await Promise.all([
+  const [settings, analytics, recentChats] = await Promise.all([
     this.getSettings(),
-    this.getPreferences(),
     this.getAnalytics(),
     this.getChats({ limit: 5 })
   ]);
@@ -177,7 +170,6 @@ userSchema.methods.getFullProfile = async function() {
   return {
     user: this.toJSON(),
     settings: settings.toJSON(),
-    preferences: preferences.toJSON(),
     analytics: analytics.toJSON(),
     recentChats: recentChats
   };
@@ -187,14 +179,12 @@ userSchema.methods.getFullProfile = async function() {
 userSchema.methods.deleteUserData = async function() {
   const Chat = mongoose.model('Chat');
   const UserSettings = mongoose.model('UserSettings');
-  const UserPreferences = mongoose.model('UserPreferences');
   const UserAnalytics = mongoose.model('UserAnalytics');
 
   // Delete all related data
   await Promise.all([
     Chat.deleteMany({ user: this._id }),
     UserSettings.deleteOne({ user: this._id }),
-    UserPreferences.deleteOne({ user: this._id }),
     UserAnalytics.deleteOne({ user: this._id })
   ]);
 
@@ -204,9 +194,8 @@ userSchema.methods.deleteUserData = async function() {
 
 // Method to export all user data
 userSchema.methods.exportAllData = async function() {
-  const [settings, preferences, analytics, chats] = await Promise.all([
+  const [settings, analytics, chats] = await Promise.all([
     this.getSettings(),
-    this.getPreferences(),
     this.getAnalytics(),
     this.getChats({ limit: 1000, includeArchived: true })
   ]);
@@ -214,7 +203,6 @@ userSchema.methods.exportAllData = async function() {
   return {
     user: this.toJSON(),
     settings: settings.exportSettings(),
-    preferences: preferences.exportPreferences(),
     analytics: analytics.toJSON(),
     chats: chats.map(chat => chat.toJSON()),
     exportedAt: new Date(),

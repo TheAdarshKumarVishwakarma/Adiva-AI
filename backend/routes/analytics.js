@@ -1,14 +1,23 @@
 import express from "express";
 import dotenv from 'dotenv';
 import analyticsService from '../services/analyticsService.js';
+import AdminSettings from '../models/AdminSettings.js';
 
 dotenv.config();
 
 const router = express.Router();
 
 // Middleware to track analytics
-const trackAnalytics = (req, res, next) => {
+const trackAnalytics = async (req, res, next) => {
   const startTime = Date.now();
+  try {
+    const adminSettings = await AdminSettings.getSettings();
+    if (adminSettings.settings.featureToggles?.analytics === false) {
+      return next();
+    }
+  } catch (error) {
+    // If admin settings fail, keep analytics running
+  }
   
   // Track request
   analyticsService.trackRequest(req);
@@ -33,20 +42,34 @@ const trackAnalytics = (req, res, next) => {
 // Apply analytics tracking to all routes
 router.use(trackAnalytics);
 
+const ensureAnalyticsEnabled = async (res) => {
+  const adminSettings = await AdminSettings.getSettings();
+  if (adminSettings.settings.featureToggles?.analytics === false) {
+    res.status(403).json({ error: 'Analytics disabled' });
+    return false;
+  }
+  return true;
+};
+
 // GET /api/analytics/overview
-router.get('/analytics/overview', (req, res) => {
+router.get('/analytics/overview', async (req, res) => {
+  console.log('INCOMING /analytics/overview from', req.ip, 'headers:', req.headers);
   try {
+    if (!(await ensureAnalyticsEnabled(res))) return;
     const overview = analyticsService.getOverview();
+    console.log('Returning overview');
     return res.json(overview);
-  } catch (error) {
-    console.error('❌ Analytics overview error:', error);
+  } catch (err) {
+    console.error(err);
     return res.status(500).json({ error: 'Failed to retrieve analytics overview' });
   }
 });
 
+
 // GET /api/analytics/daily
-router.get('/analytics/daily', (req, res) => {
+router.get('/analytics/daily', async (req, res) => {
   try {
+    if (!(await ensureAnalyticsEnabled(res))) return;
     const { days = 7 } = req.query;
     const dailyStats = analyticsService.getDailyStats(days);
     return res.json(dailyStats);
@@ -57,8 +80,9 @@ router.get('/analytics/daily', (req, res) => {
 });
 
 // GET /api/analytics/hourly
-router.get('/analytics/hourly', (req, res) => {
+router.get('/analytics/hourly', async (req, res) => {
   try {
+    if (!(await ensureAnalyticsEnabled(res))) return;
     const hourlyStats = analyticsService.getHourlyStats();
     return res.json(hourlyStats);
   } catch (error) {
@@ -68,8 +92,9 @@ router.get('/analytics/hourly', (req, res) => {
 });
 
 // GET /api/analytics/task-types
-router.get('/analytics/task-types', (req, res) => {
+router.get('/analytics/task-types', async (req, res) => {
   try {
+    if (!(await ensureAnalyticsEnabled(res))) return;
     const overview = analyticsService.getOverview();
     const taskTypeStats = Object.entries(overview.taskTypeDistribution).map(([type, count]) => ({
       type,
@@ -89,8 +114,9 @@ router.get('/analytics/task-types', (req, res) => {
 });
 
 // POST /api/analytics/track
-router.post('/analytics/track', (req, res) => {
+router.post('/analytics/track', async (req, res) => {
   try {
+    if (!(await ensureAnalyticsEnabled(res))) return;
     const { event, data } = req.body;
     
     switch (event) {

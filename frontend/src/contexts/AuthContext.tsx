@@ -176,6 +176,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const changePassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
     try {
       setIsLoading(true);
+      if (!token) {
+        return { success: false, message: 'You are not logged in. Please login again.' };
+      }
       const response = await fetch('http://localhost:3001/api/auth/change-password', {
         method: 'PUT',
         headers: {

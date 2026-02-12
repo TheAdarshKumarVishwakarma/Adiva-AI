@@ -41,15 +41,28 @@ export class ImageProcessingService {
       formData.append('conversationId', request.conversationId);
       formData.append('modelId', request.modelId);
 
+      const token = localStorage.getItem('token');
       const response = await fetch(`${this.API_BASE_URL}/chat-with-image`, {
         method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+        credentials: 'include',
         body: formData,
       });
 
       console.log('📡 Image processing response status:', response.status);
 
       if (!response.ok) {
-        const errorText = await response.text();
+        let errorPayload: any = null;
+        let errorText = '';
+        try {
+          errorPayload = await response.json();
+          errorText = JSON.stringify(errorPayload);
+        } catch {
+          errorText = await response.text();
+        }
+        if (response.status === 401 && errorPayload?.code === 'GUEST_LOGIN_REQUIRED') {
+          window.dispatchEvent(new CustomEvent('auth-required', { detail: { limit: errorPayload?.limit || 5 } }));
+        }
         console.error('❌ Image processing API Error:', response.status, errorText);
         throw new Error(`Image processing failed: ${response.status} - ${errorText}`);
       }
@@ -83,11 +96,14 @@ export class ImageProcessingService {
       const imagePrompt = request.message || 'What do you see in this image?';
       const fullPrompt = `${imagePrompt}\n\n[Image attached: ${request.image.name}]\n\nPlease analyze this image and provide a detailed description of what you see.`;
 
+      const token = localStorage.getItem('token');
       const response = await fetch(`${this.API_BASE_URL}/chat`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
+        credentials: 'include',
         body: JSON.stringify({
           message: fullPrompt,
           systemPrompt: request.systemPrompt,
@@ -100,7 +116,17 @@ export class ImageProcessingService {
       console.log('📡 Fallback response status:', response.status);
 
       if (!response.ok) {
-        const errorText = await response.text();
+        let errorPayload: any = null;
+        let errorText = '';
+        try {
+          errorPayload = await response.json();
+          errorText = JSON.stringify(errorPayload);
+        } catch {
+          errorText = await response.text();
+        }
+        if (response.status === 401 && errorPayload?.code === 'GUEST_LOGIN_REQUIRED') {
+          window.dispatchEvent(new CustomEvent('auth-required', { detail: { limit: errorPayload?.limit || 5 } }));
+        }
         console.error('❌ Fallback API Error:', response.status, errorText);
         throw new Error(`Fallback processing failed: ${response.status} - ${errorText}`);
       }
