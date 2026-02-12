@@ -1,6 +1,7 @@
 import express from "express";
 import OpenAI from "openai";
 import dotenv from 'dotenv';
+import AdminSettings from '../models/AdminSettings.js';
 
 dotenv.config();
 
@@ -13,16 +14,37 @@ const openai = new OpenAI({
 
 // Available AI models configuration
 const AI_MODELS = {
+
+  /* --------------------------------
+     GPT-4o MINI (COMMENTED - OLD)
+     Uses Chat Completions API
+  -------------------------------- */
+  /*
   'gpt-4o-mini': {
-    name: 'GPT-4o Mini',
+    name: 'Adiva-2.0-Mini',
     provider: 'OpenAI',
     maxTokens: 16384,
     costPer1kTokens: 0.00015,
     description: 'Fast and efficient model for most tasks',
     capabilities: ['text-generation', 'conversation', 'analysis', 'coding', 'vision']
   },
+  */
+
+  /* --------------------------------
+     GPT-5 NANO MINI (NEW - ACTIVE)
+     Uses Responses API
+  -------------------------------- */
+  'gpt-5-nano': {
+    name: 'Adiva-5.0-Nano',
+    provider: 'OpenAI',
+    maxTokens: 8192,
+    costPer1kTokens: 0.00005,
+    description: 'Ultra-fast GPT-5 Nano Mini',
+    capabilities: ['text-generation', 'conversation']
+  },
+
   'claude-sonnet-4-20250514': {
-    name: 'Claude Sonnet 4',
+    name: 'Adiva-4.0-Sonnet',
     provider: 'Anthropic',
     maxTokens: 200000,
     costPer1kTokens: 0.003,
@@ -32,12 +54,16 @@ const AI_MODELS = {
 };
 
 // GET /api/ai-models
-router.get('/ai-models', (req, res) => {
+router.get('/ai-models', async (req, res) => {
   try {
-    const models = Object.entries(AI_MODELS).map(([id, model]) => ({
-      id,
-      ...model
-    }));
+    const adminSettings = await AdminSettings.getSettings();
+    const allowed = new Set(adminSettings.settings.allowedModels || []);
+    const models = Object.entries(AI_MODELS)
+      .filter(([id]) => allowed.size === 0 || allowed.has(id))
+      .map(([id, model]) => ({
+        id,
+        ...model
+      }));
     
     return res.json({
       models,
@@ -45,19 +71,25 @@ router.get('/ai-models', (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('❌ AI models list error:', error);
+    console.error('??? AI models list error:', error);
     return res.status(500).json({ error: 'Failed to retrieve AI models' });
   }
 });
 
 // GET /api/ai-models/:modelId
-router.get('/ai-models/:modelId', (req, res) => {
+router.get('/ai-models/:modelId', async (req, res) => {
   try {
     const { modelId } = req.params;
     const model = AI_MODELS[modelId];
     
     if (!model) {
       return res.status(404).json({ error: 'AI model not found' });
+    }
+    
+    const adminSettings = await AdminSettings.getSettings();
+    const allowed = new Set(adminSettings.settings.allowedModels || []);
+    if (allowed.size > 0 && !allowed.has(modelId)) {
+      return res.status(403).json({ error: 'AI model not allowed' });
     }
     
     return res.json({
@@ -75,71 +107,109 @@ router.get('/ai-models/:modelId', (req, res) => {
 router.post('/ai-models/generate', async (req, res) => {
   try {
     const { 
-      modelId = 'gpt-4o-mini', 
+      modelId = 'gpt-5-nano',
       messages, 
       temperature = 0.7, 
       maxTokens = 2000,
       systemPrompt,
       userPrompt 
     } = req.body;
-    
-    // Validate model
+
     if (!AI_MODELS[modelId]) {
       return res.status(400).json({ error: 'Invalid AI model specified' });
     }
-    
-    // Validate input
+
+    const adminSettings = await AdminSettings.getSettings();
+    const allowed = new Set(adminSettings.settings.allowedModels || []);
+    if (allowed.size > 0 && !allowed.has(modelId)) {
+      return res.status(403).json({ error: 'AI model not allowed' });
+    }
+
     if (!messages && !userPrompt) {
       return res.status(400).json({ error: 'Messages or userPrompt is required' });
     }
-    
-    // Prepare messages array
+
     let messageArray = [];
-    
+
     if (systemPrompt) {
       messageArray.push({ role: 'system', content: systemPrompt });
     }
-    
+
     if (messages) {
       messageArray.push(...messages);
-    } else if (userPrompt) {
+    } else {
       messageArray.push({ role: 'user', content: userPrompt });
     }
-    
+
     console.log(`🤖 Generating response with model: ${modelId}`);
     console.log(`📝 Message count: ${messageArray.length}`);
     console.log(`🌡️ Temperature: ${temperature}`);
     console.log(`🔢 Max tokens: ${maxTokens}`);
-    
-    const response = await openai.chat.completions.create({
-      model: modelId,
-      messages: messageArray,
-      temperature: Math.max(0, Math.min(2, temperature)), // Clamp between 0 and 2
-      max_tokens: Math.min(maxTokens, AI_MODELS[modelId].maxTokens),
-      top_p: 1,
-      frequency_penalty: 0,
-      presence_penalty: 0,
-    });
-    
-    const aiResponse = response.choices[0].message.content;
-    const usage = response.usage;
-    
+
+    let aiResponse;
+    let usage;
+
+    /* --------------------------------
+       GPT-5 NANO → Responses API
+    -------------------------------- */
+    if (modelId.startsWith('gpt-5')) {
+      const response = await openai.responses.create({
+        model: modelId,
+        input: messageArray
+          .map(m => `${m.role.toUpperCase()}: ${m.content}`)
+          .join('\n'),
+        temperature: Math.max(0, Math.min(2, temperature)),
+        max_output_tokens: Math.min(maxTokens, AI_MODELS[modelId].maxTokens),
+      });
+
+      aiResponse = response.output_text;
+      usage = response.usage;
+    }
+
+    /* --------------------------------
+       GPT-4o MINI (COMMENTED - OLD)
+    -------------------------------- */
+    /*
+    else {
+      const response = await openai.chat.completions.create({
+        model: modelId,
+        messages: messageArray,
+        temperature: Math.max(0, Math.min(2, temperature)),
+        max_tokens: Math.min(maxTokens, AI_MODELS[modelId].maxTokens),
+        top_p: 1,
+        frequency_penalty: 0,
+        presence_penalty: 0,
+      });
+
+      aiResponse = response.choices[0].message.content;
+      usage = response.usage;
+    }
+    */
+
     console.log(`✅ Response generated successfully`);
-    console.log(`📊 Tokens used: ${usage.total_tokens}`);
-    console.log(`💰 Estimated cost: $${((usage.total_tokens / 1000) * AI_MODELS[modelId].costPer1kTokens).toFixed(6)}`);
-    
+    console.log(`📊 Tokens used: ${usage?.total_tokens || 0}`);
+    console.log(
+      `💰 Estimated cost: $${(
+        ((usage?.total_tokens || 0) / 1000) *
+        AI_MODELS[modelId].costPer1kTokens
+      ).toFixed(6)}`
+    );
+
     return res.json({
       reply: aiResponse,
       model: modelId,
       usage: {
-        promptTokens: usage.prompt_tokens,
-        completionTokens: usage.completion_tokens,
-        totalTokens: usage.total_tokens,
-        estimatedCost: ((usage.total_tokens / 1000) * AI_MODELS[modelId].costPer1kTokens).toFixed(6)
+        promptTokens: usage?.prompt_tokens,
+        completionTokens: usage?.completion_tokens,
+        totalTokens: usage?.total_tokens,
+        estimatedCost: (
+          ((usage?.total_tokens || 0) / 1000) *
+          AI_MODELS[modelId].costPer1kTokens
+        ).toFixed(6)
       },
       timestamp: new Date().toISOString()
     });
-    
+
   } catch (error) {
     console.error('❌ AI generation error:', error);
     

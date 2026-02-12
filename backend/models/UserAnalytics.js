@@ -363,9 +363,9 @@ userAnalyticsSchema.methods.getInsights = function() {
   }
   
   // Model insights
-  const mostUsedModel = this.modelUsage.reduce((max, current) => 
-    current.count > max.count ? current : max
-  );
+  const mostUsedModel = Array.isArray(this.modelUsage) && this.modelUsage.length > 0
+    ? this.modelUsage.reduce((max, current) => (current.count > max.count ? current : max))
+    : null;
   if (mostUsedModel && mostUsedModel.count > 10) {
     insights.push({
       type: 'model',
@@ -375,7 +375,8 @@ userAnalyticsSchema.methods.getInsights = function() {
   }
   
   // Time insights
-  if (this.timePatterns.mostActiveHour >= 22 || this.timePatterns.mostActiveHour <= 6) {
+  if (typeof this.timePatterns.mostActiveHour === 'number' &&
+      (this.timePatterns.mostActiveHour >= 22 || this.timePatterns.mostActiveHour <= 6)) {
     insights.push({
       type: 'time',
       message: 'You\'re most active during late hours. Consider taking breaks!',

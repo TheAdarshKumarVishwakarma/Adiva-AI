@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import AIchat from './components/AIchat';
 import { Button } from './components/ui/button';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import AuthWrapper from './components/auth/AuthWrapper';
 import ProfileModal from './components/auth/ProfileModal';
+import AdminSettingsModal from './components/admin/AdminSettingsModal';
 import OAuthHandler from './components/OAuthHandler';
-import { 
-  Bot, 
-  Settings2, 
+import AuthModal from './components/auth/AuthModal';
+import {
+  Bot,
+  Settings2,
   Plus,
   Menu,
   X,
@@ -17,16 +18,19 @@ import {
   User
 } from 'lucide-react';
 
-function App() {
+function AppContent() {
+  const { isAuthenticated, isLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+
   // Add state for controlling panels directly
   const [showSettings, setShowSettings] = useState(false);
-  const [showPreferences, setShowPreferences] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  
+  const [showAdminSettings, setShowAdminSettings] = useState(false);
+
   // Add state for sidebar theming
   const [sidebarThemeEnabled, setSidebarThemeEnabled] = useState(true);
   const [currentTheme, setCurrentTheme] = useState('ocean');
@@ -65,7 +69,7 @@ function App() {
       if (savedSidebarTheme !== null) {
         setSidebarThemeEnabled(savedSidebarTheme === 'true');
       }
-      
+
       const savedTheme = localStorage.getItem('chatAI_theme');
       if (savedTheme && availableThemes.some(t => t.id === savedTheme)) {
         setCurrentTheme(savedTheme);
@@ -93,11 +97,20 @@ function App() {
     };
   }, [showSettingsMenu]);
 
+  // Listen for auth-required events (guest limit, protected actions)
+  useEffect(() => {
+    const handleAuthRequired = () => {
+      if (!isAuthenticated) {
+        setAuthMode('login');
+        setShowAuthPrompt(true);
+      }
+    };
+    window.addEventListener('auth-required', handleAuthRequired);
+    return () => window.removeEventListener('auth-required', handleAuthRequired);
+  }, [isAuthenticated]);
+
   return (
-    <AuthProvider>
-      <OAuthHandler />
-      <AuthWrapper>
-        <div className="h-screen neural-bg flex overflow-hidden relative theme-ocean">
+    <div className="h-screen studio-shell flex overflow-hidden relative theme-ocean">
       {/* Enhanced Animated Background Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Primary particles */}
@@ -106,12 +119,12 @@ function App() {
         {/* <div className="absolute bottom-1/4 left-1/3 w-2.5 h-2.5 bg-gradient-to-r from-cyan-400/45 to-indigo-400/45 rounded-full animate-pulse" style={{ animationDelay: '2s' }}></div>
         <div className="absolute top-2/3 right-1/4 w-1.5 h-1.5 bg-gradient-to-r from-indigo-300/35 to-purple-300/35 rounded-full animate-pulse" style={{ animationDelay: '3s' }}></div>
         <div className="absolute bottom-1/3 left-1/2 w-2 h-2 bg-gradient-to-r from-purple-300/40 to-cyan-300/40 rounded-full animate-pulse" style={{ animationDelay: '4s' }}></div> */}
-        
+
         {/* Additional floating elements */}
         <div className="absolute top-1/6 right-1/6 w-1 h-1 bg-blue-300/30 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
         <div className="absolute bottom-1/6 right-1/3 w-1.5 h-1.5 bg-cyan-300/35 rounded-full animate-pulse" style={{ animationDelay: '1.5s' }}></div>
         <div className="absolute top-3/4 left-1/6 w-1 h-1 bg-blue-400/30 rounded-full animate-pulse" style={{ animationDelay: '2.5s' }}></div>
-        
+
         {/* Neural network lines */}
         <div className="absolute top-1/2 left-1/4 w-16 h-px bg-gradient-to-r from-transparent via-blue-400/20 to-transparent animate-pulse" style={{ animationDelay: '0.8s' }}></div>
         <div className="absolute top-1/3 right-1/4 w-12 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent animate-pulse" style={{ animationDelay: '1.8s' }}></div>
@@ -119,14 +132,93 @@ function App() {
       </div>
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-72 sidebar-ai transform transition-all duration-500 ease-out ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:relative lg:translate-x-0 lg:border-r lg:border-white/5`}>
-        <div className="flex flex-col h-full overflow-visible">
-          {/* Enhanced Header */}
-          <div className="flex items-center justify-between p-6 border-b border-white/10 relative overflow-hidden">
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-[300px] sm:w-[340px] transform transition-all duration-500 ease-out sidebar-shell ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:relative lg:translate-x-0`}
+        data-open={sidebarOpen ? 'true' : 'false'}
+      >
+        <div className="h-full p-3 sm:p-4">
+          <div className="sidebar-float h-full rounded-3xl overflow-hidden flex">
+            {/* Editor Rail */}
+            <div className="sidebar-rail flex flex-col items-center py-5 gap-3">
+              <button
+                className="rail-btn"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <Bot className="h-5 w-5" />
+              </button>
+              <button
+                className="rail-btn"
+                data-tooltip="New Conversation"
+                onClick={() => window.dispatchEvent(new CustomEvent('startNewChat'))}
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+              {isAuthenticated && (
+                <>
+                  <button
+                    className="rail-btn"
+                    data-tooltip="Settings"
+                    data-settings-toggle="true"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowSettings((prev) => {
+                        const next = !prev;
+                        if (next) {
+                          setShowAnalytics(false);
+                        }
+                        return next;
+                      });
+                    }}
+                  >
+                    <Settings2 className="h-5 w-5" />
+                  </button>
+                  <button
+                    className="rail-btn"
+                    data-tooltip="Chat Analytics"
+                    data-analytics-toggle="true"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowAnalytics((prev) => {
+                        const next = !prev;
+                        if (next) {
+                          setShowSettings(false);
+                        }
+                        return next;
+                      });
+                    }}
+                  >
+                    <BarChart3 className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+              <div className="rail-spacer" />
+              <button
+                className="rail-btn"
+                data-tooltip="Profile"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!isAuthenticated) {
+                    setAuthMode('login');
+                    setShowAuthPrompt(true);
+                  } else {
+                    setShowProfile(true);
+                  }
+                }}
+              >
+                <User className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Sidebar Panel */}
+            <div className="flex flex-col h-full flex-1 overflow-hidden">
+              {/* Enhanced Header */}
+              <div className="flex items-center justify-between px-5 pt-6 pb-4 border-b border-white/10 relative overflow-hidden">
             {/* Background gradient overlay */}
-            <div 
+            <div
               className="absolute inset-0"
               style={sidebarThemeEnabled ? {
                 background: `linear-gradient(to right, ${getCurrentTheme().primaryColor}05, ${getCurrentTheme().secondaryColor}05, ${getCurrentTheme().accentColor}05)`
@@ -134,9 +226,9 @@ function App() {
                 background: 'linear-gradient(to right, #3b82f605, #06b6d405, #60a5fa05)'
               }}
             ></div>
-            
+
             <div className="flex items-center space-x-3 relative z-10">
-              <div 
+              <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center ai-glow shadow-lg hover:shadow-xl transition-all duration-300 group"
                 style={sidebarThemeEnabled ? {
                   background: `linear-gradient(135deg, ${getCurrentTheme().primaryColor}, ${getCurrentTheme().secondaryColor}, ${getCurrentTheme().accentColor})`
@@ -147,7 +239,7 @@ function App() {
                 <Bot className="h-7 w-7 text-white group-hover:scale-110 transition-transform duration-300" />
               </div>
               <div>
-                <h1 
+                <h1
                   className="font-bold text-xl"
                   style={sidebarThemeEnabled ? {
                     color: getCurrentTheme().primaryColor
@@ -157,7 +249,7 @@ function App() {
                 >
                   Adiva AI
                 </h1>
-                <p 
+                <p
                   className="text-sm"
                   style={sidebarThemeEnabled ? { color: getCurrentTheme().primaryColor } : { color: '#60a5fa' }}
                 >
@@ -165,21 +257,21 @@ function App() {
                 </p>
               </div>
             </div>
-                         <Button
-               variant="ghost"
-               size="sm"
-               className="lg:hidden hover:text-white hover:bg-white/10 rounded-lg transition-all duration-300"
-               style={sidebarThemeEnabled ? { color: getCurrentTheme().primaryColor } : { color: '#60a5fa' }}
-               onClick={() => setSidebarOpen(false)}
-             >
+            <Button
+              variant="ghost"
+              size="sm"
+              className="lg:hidden hover:text-white hover:bg-white/10 rounded-lg transition-all duration-300"
+              style={sidebarThemeEnabled ? { color: getCurrentTheme().primaryColor } : { color: '#60a5fa' }}
+              onClick={() => setSidebarOpen(false)}
+            >
               <X className="h-5 w-5" />
             </Button>
           </div>
 
           {/* New Chat Button */}
-          <div className="p-6">
-            <Button 
-              className="w-full text-white border-0 h-12 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 btn-ai group"
+          <div className="px-5 pt-4 pb-2">
+            <Button
+              className="w-full text-white border-0 h-11 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 btn-ai group"
               style={sidebarThemeEnabled ? {
                 background: `linear-gradient(135deg, ${getCurrentTheme().primaryColor}, ${getCurrentTheme().secondaryColor})`
               } : {
@@ -195,7 +287,7 @@ function App() {
           </div>
 
           {/* Enhanced Quick Stats */}
-          <div className="px-6 mb-4">
+          {/* <div className="px-6 mb-4">
             <div className="grid grid-cols-2 gap-3">
               <div 
                 className="glass-dark p-4 rounded-xl text-center border border-white/10 transition-all duration-300 hover:scale-105 group"
@@ -252,12 +344,12 @@ function App() {
                 ></div>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Chat History */}
-          <div className="flex-1 overflow-y-auto overflow-x-visible p-6 space-y-4">
-            <div className="flex items-center gap-3 text-base font-semibold mb-4">
-              <div 
+          <div className="flex-1 overflow-y-auto overflow-x-visible px-5 py-4 space-y-4">
+            <div className="flex items-center gap-3 text-base font-semibold mb-3">
+              <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
                 style={sidebarThemeEnabled ? {
                   background: `linear-gradient(135deg, ${getCurrentTheme().primaryColor}20, ${getCurrentTheme().secondaryColor}20)`
@@ -265,8 +357,8 @@ function App() {
                   background: 'linear-gradient(135deg, #3b82f620, #06b6d420)'
                 }}
               >
-                <Clock 
-                  className="h-4 w-4" 
+                <Clock
+                  className="h-4 w-4"
                   style={sidebarThemeEnabled ? { color: getCurrentTheme().primaryColor } : { color: '#60a5fa' }}
                 />
               </div>
@@ -280,82 +372,16 @@ function App() {
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-white/10">
-            
-            <div className="relative overflow-visible settings-menu-container">
-                             <Button 
-                 variant="ghost" 
-                 className="w-full hover:text-white hover:bg-white/10 justify-start rounded-lg h-12"
-                 style={sidebarThemeEnabled ? { color: getCurrentTheme().primaryColor } : { color: '#60a5fa' }}
-                 onClick={(e) => {
-                   e.preventDefault();
-                   e.stopPropagation();
-                   setShowSettingsMenu(!showSettingsMenu);
-                 }}
-               >
-                <Settings2 className="h-4 w-4 mr-3" />
-                Settings & Preferences
-              </Button>
-              
-                             {/* Settings Dropdown Menu */}
-               {showSettingsMenu && (
-                 <div className="absolute bottom-full left-0 w-full mb-2 glass-dark border border-white/20 rounded-xl shadow-2xl overflow-visible z-[60]">
-                   <div className="p-2">
-                     <button
-                       onClick={(e) => {
-                         e.preventDefault();
-                         e.stopPropagation();
-                         setShowSettingsMenu(false);
-                         setShowSettings(true);
-                       }}
-                       className="w-full text-left p-3 rounded-lg text-white hover:bg-white/10 transition-all duration-200 flex items-center gap-3"
-                     >
-                       <Settings2 className="h-4 w-4" />
-                       Settings
-                     </button>
-                     <button
-                       onClick={(e) => {
-                         e.preventDefault();
-                         e.stopPropagation();
-                         setShowSettingsMenu(false);
-                         setShowPreferences(true);
-                       }}
-                       className="w-full text-left p-3 rounded-lg text-white hover:bg-white/10 transition-all duration-200 flex items-center gap-3"
-                     >
-                       <Sparkles className="h-4 w-4" />
-                       Preferences
-                     </button>
-                   </div>
-                 </div>
-               )}
+          <div className="px-5 pb-6 pt-2">
+            <div className="h-px w-full bg-white/10" />
+          </div>
             </div>
-            
-            <Button 
-              variant="ghost" 
-              className="w-full hover:text-white hover:bg-white/10 justify-start rounded-lg h-12"
-              style={sidebarThemeEnabled ? { color: getCurrentTheme().primaryColor } : { color: '#60a5fa' }}
-              onClick={() => setShowAnalytics(!showAnalytics)}
-              data-analytics-toggle="true"
-            >
-              <BarChart3 className="h-4 w-4 mr-3" />
-              Chat Analytics
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              className="w-full hover:text-white hover:bg-white/10 justify-start rounded-lg h-12"
-              style={sidebarThemeEnabled ? { color: getCurrentTheme().primaryColor } : { color: '#60a5fa' }}
-              onClick={() => setShowProfile(true)}
-            >
-              <User className="h-4 w-4 mr-3" />
-              Profile
-            </Button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden sidebar-ai lg:border-l lg:border-white/5">
+      <div className="flex-1 flex flex-col overflow-hidden studio-canvas">
         {/* Top Bar with Mobile Menu */}
         <div className="glass-dark border-b border-white/10 p-4 lg:hidden">
           <Button
@@ -368,36 +394,51 @@ function App() {
             <Menu className="h-6 w-6" />
           </Button>
         </div>
-        
+
         {/* Chat Area */}
         <div className="flex-1 overflow-hidden">
-          <div className="h-full max-w-6xl mx-auto">
-                         <AIchat 
-               showSettings={showSettings}
-               setShowSettings={setShowSettings}
-               showPreferences={showPreferences}
-               setShowPreferences={setShowPreferences}
-               showAnalytics={showAnalytics}
-               setShowAnalytics={setShowAnalytics}
-               onSidebarThemeChange={handleSidebarThemeChange}
-               onThemeChange={handleThemeChange}
-             />
+          <div className="h-full max-w-6xl mx-auto px-2 sm:px-4">
+            <AIchat
+              showSettings={showSettings}
+              setShowSettings={setShowSettings}
+              showAnalytics={showAnalytics}
+              setShowAnalytics={setShowAnalytics}
+              onSidebarThemeChange={handleSidebarThemeChange}
+              onThemeChange={handleThemeChange}
+            />
           </div>
         </div>
       </div>
 
       {/* Mobile Overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Profile Modal */}
-      <ProfileModal 
-        isOpen={showProfile} 
-        onClose={() => setShowProfile(false)} 
+      <ProfileModal
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+        onOpenAdmin={() => {
+          setShowProfile(false);
+          setShowAdminSettings(true);
+        }}
+      />
+
+      <AdminSettingsModal
+        isOpen={showAdminSettings}
+        onClose={() => setShowAdminSettings(false)}
+      />
+
+      {/* Auth Prompt */}
+      <AuthModal
+        isOpen={showAuthPrompt && !isAuthenticated && !isLoading}
+        mode={authMode}
+        onClose={() => setShowAuthPrompt(false)}
+        onSwitchMode={(mode) => setAuthMode(mode)}
       />
 
       {/* Floating AI Elements */}
@@ -424,9 +465,16 @@ function App() {
           <Cpu className="h-5 w-5 text-blue-400" />
         </div>
       </div> */}
-      
-        </div>
-      </AuthWrapper>
+
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <OAuthHandler />
+      <AppContent />
     </AuthProvider>
   );
 }

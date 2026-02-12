@@ -103,6 +103,11 @@ const chatSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  pinned: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
   lastMessageAt: {
     type: Date,
     default: Date.now,
@@ -132,9 +137,16 @@ chatSchema.virtual('actualMessageCount').get(function() {
 
 // Method to add a message
 chatSchema.methods.addMessage = function(role, content, metadata = {}) {
+  this.messages = (this.messages || []).filter(
+    msg => typeof msg.content === 'string' && msg.content.trim().length
+  );
+  const normalizedContent =
+    typeof content === 'string' && content.trim().length
+      ? content
+      : '[no content]';
   const message = {
     role,
-    content,
+    content: normalizedContent,
     timestamp: new Date(),
     metadata: {
       model: this.settings.model,
@@ -236,4 +248,6 @@ chatSchema.pre('save', function(next) {
 });
 
 export default mongoose.model('Chat', chatSchema);
+
+
 

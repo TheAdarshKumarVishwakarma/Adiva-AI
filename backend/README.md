@@ -55,7 +55,6 @@ backend/
 │   ├── User.js               # User model with authentication
 │   ├── Chat.js               # Chat conversation model
 │   ├── UserAnalytics.js      # User analytics tracking
-│   ├── UserPreferences.js    # User preferences model
 │   └── UserSettings.js       # User settings model
 ├── routes/
 │   ├── auth.js               # Authentication routes (login, register, OAuth)
@@ -189,8 +188,6 @@ node server.js
 - **DELETE** `/api/chat/history/:conversationId` - Delete conversation
 
 ### User Management
-- **GET** `/api/user/preferences` - Get user preferences
-- **PUT** `/api/user/preferences` - Update user preferences
 - **GET** `/api/user/settings` - Get user settings
 - **PUT** `/api/user/settings` - Update user settings
 - **POST** `/api/user/export` - Export user data

@@ -107,7 +107,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
             border: selectedImage ? 'none' : '1px solid rgba(255, 255, 255, 0.2)',
             color: selectedImage ? 'white' : 'rgba(255, 255, 255, 0.7)'
           }}
-          title={selectedImage ? "Change Image" : "Upload Image"}
+          // title={selectedImage ? "Change Image" : "Upload Image"}
         >
           {isUploading ? (
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>

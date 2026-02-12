@@ -4,6 +4,7 @@ import analyticsRoutes from './analytics.js';
 import aiModelsRoutes from './ai-models.js';
 import authRoutes from './auth.js';
 import userRoutes from './user.js';
+import adminRoutes from './admin.js';
 
 const router = express.Router();
 
@@ -13,6 +14,7 @@ const API_VERSION = '/api';
 // Mount routes
 router.use(`${API_VERSION}/auth`, authRoutes);
 router.use(`${API_VERSION}/user`, userRoutes);
+router.use(`${API_VERSION}/admin`, adminRoutes);
 router.use(API_VERSION, chatRoutes);
 router.use(API_VERSION, analyticsRoutes);
 router.use(API_VERSION, aiModelsRoutes);
@@ -58,12 +60,13 @@ router.get('/api-docs', (req, res) => {
         'GET /api/user/settings': 'Get user settings',
         'PUT /api/user/settings': 'Update user settings',
         'POST /api/user/settings/reset': 'Reset settings to defaults',
-        'GET /api/user/preferences': 'Get user preferences',
-        'PUT /api/user/preferences': 'Update user preferences',
-        'POST /api/user/preferences/reset': 'Reset preferences to defaults',
         'GET /api/user/analytics': 'Get user analytics and insights',
         'GET /api/user/export': 'Export all user data',
         'DELETE /api/user/account': 'Delete user account and all data'
+      },
+      admin: {
+        'GET /api/admin/settings': 'Get admin system settings',
+        'PUT /api/admin/settings': 'Update admin system settings (2-step confirmation)'
       },
       chat: {
         'POST /api/chat': 'Send a message and get AI response with conversation history',
