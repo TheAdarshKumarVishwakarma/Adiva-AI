@@ -1,26 +1,29 @@
-import { useState, useEffect } from 'react';
-import AIchat from './components/AIchat';
+import { memo, useState, useEffect } from 'react';
+import AIchat from './features/chat/components/AIchat';
 import { Button } from './components/ui/button';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProfileModal from './components/auth/ProfileModal';
-import AdminSettingsModal from './components/admin/AdminSettingsModal';
+import AdminSettingsModal from './features/admin/components/AdminSettingsModal';
 import OAuthHandler from './components/OAuthHandler';
 import AuthModal from './components/auth/AuthModal';
 import {
-  Bot,
   Settings2,
   Plus,
-  Menu,
-  X,
   Clock,
-  Sparkles,
   BarChart3,
-  User
+  User,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
+import LogoMark from './shared/components/LogoMark';
+import LogoLoader from './shared/components/LogoLoader';
+
+const MemoAIchat = memo(AIchat);
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarPanelOpen, setSidebarPanelOpen] = useState(true);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -109,22 +112,39 @@ function AppContent() {
     return () => window.removeEventListener('auth-required', handleAuthRequired);
   }, [isAuthenticated]);
 
+  // Allow child/sidebar actions to request mobile sidebar close.
+  useEffect(() => {
+    const handleCloseSidebarMobile = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('closeSidebarMobile', handleCloseSidebarMobile as EventListener);
+    return () => {
+      window.removeEventListener('closeSidebarMobile', handleCloseSidebarMobile as EventListener);
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen studio-shell flex overflow-hidden relative theme-ocean">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/2 left-1/4 w-16 h-px bg-gradient-to-r from-transparent via-blue-400/20 to-transparent animate-pulse" style={{ animationDelay: '0.8s' }}></div>
+          <div className="absolute top-1/3 right-1/4 w-12 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent animate-pulse" style={{ animationDelay: '1.8s' }}></div>
+          <div className="absolute bottom-1/3 left-1/2 w-20 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent animate-pulse" style={{ animationDelay: '2.8s' }}></div>
+        </div>
+        <div className="m-auto flex items-center gap-3 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-blue-100 backdrop-blur-md">
+          <LogoLoader sizeClassName="h-5 w-5" />
+          <span className="text-sm font-medium">Restoring session...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen studio-shell flex overflow-hidden relative theme-ocean">
       {/* Enhanced Animated Background Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Primary particles */}
-        {/* <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-gradient-to-r from-indigo-400/40 to-purple-400/40 rounded-full animate-pulse" style={{ animationDelay: '0s' }}></div> */}
-        {/* <div className="absolute top-1/3 right-1/3 w-2 h-2 bg-gradient-to-r from-purple-400/50 to-cyan-400/50 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div> */}
-        {/* <div className="absolute bottom-1/4 left-1/3 w-2.5 h-2.5 bg-gradient-to-r from-cyan-400/45 to-indigo-400/45 rounded-full animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-2/3 right-1/4 w-1.5 h-1.5 bg-gradient-to-r from-indigo-300/35 to-purple-300/35 rounded-full animate-pulse" style={{ animationDelay: '3s' }}></div>
-        <div className="absolute bottom-1/3 left-1/2 w-2 h-2 bg-gradient-to-r from-purple-300/40 to-cyan-300/40 rounded-full animate-pulse" style={{ animationDelay: '4s' }}></div> */}
-
-        {/* Additional floating elements */}
-        <div className="absolute top-1/6 right-1/6 w-1 h-1 bg-blue-300/30 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-        <div className="absolute bottom-1/6 right-1/3 w-1.5 h-1.5 bg-cyan-300/35 rounded-full animate-pulse" style={{ animationDelay: '1.5s' }}></div>
-        <div className="absolute top-3/4 left-1/6 w-1 h-1 bg-blue-400/30 rounded-full animate-pulse" style={{ animationDelay: '2.5s' }}></div>
-
         {/* Neural network lines */}
         <div className="absolute top-1/2 left-1/4 w-16 h-px bg-gradient-to-r from-transparent via-blue-400/20 to-transparent animate-pulse" style={{ animationDelay: '0.8s' }}></div>
         <div className="absolute top-1/3 right-1/4 w-12 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent animate-pulse" style={{ animationDelay: '1.8s' }}></div>
@@ -133,8 +153,9 @@ function AppContent() {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-[300px] sm:w-[340px] transform transition-all duration-500 ease-out sidebar-shell ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } lg:relative lg:translate-x-0`}
+        className={`fixed inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-out will-change-transform lg:transition-[width] lg:duration-200 sidebar-shell w-[300px] sm:w-[340px] ${
+          sidebarPanelOpen ? 'lg:w-[340px]' : 'lg:w-[86px]'
+        } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0`}
         data-open={sidebarOpen ? 'true' : 'false'}
       >
         <div className="h-full p-3 sm:p-4">
@@ -143,14 +164,24 @@ function AppContent() {
             <div className="sidebar-rail flex flex-col items-center py-5 gap-3">
               <button
                 className="rail-btn"
-                onClick={() => setSidebarOpen(false)}
+                // data-tooltip={sidebarPanelOpen ? 'Collapse Sidebar' : 'Expand Sidebar'}
+                onClick={() => {
+                  if (window.innerWidth >= 1024) {
+                    setSidebarPanelOpen((prev) => !prev);
+                  } else {
+                    setSidebarOpen(false);
+                  }
+                }}
               >
-                <Bot className="h-5 w-5" />
+                {sidebarPanelOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
               </button>
               <button
                 className="rail-btn"
                 data-tooltip="New Conversation"
-                onClick={() => window.dispatchEvent(new CustomEvent('startNewChat'))}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('startNewChat'));
+                  window.dispatchEvent(new CustomEvent('closeSidebarMobile'));
+                }}
               >
                 <Plus className="h-5 w-5" />
               </button>
@@ -170,6 +201,7 @@ function AppContent() {
                         }
                         return next;
                       });
+                      window.dispatchEvent(new CustomEvent('closeSidebarMobile'));
                     }}
                   >
                     <Settings2 className="h-5 w-5" />
@@ -188,6 +220,7 @@ function AppContent() {
                         }
                         return next;
                       });
+                      window.dispatchEvent(new CustomEvent('closeSidebarMobile'));
                     }}
                   >
                     <BarChart3 className="h-5 w-5" />
@@ -214,7 +247,11 @@ function AppContent() {
             </div>
 
             {/* Sidebar Panel */}
-            <div className="flex flex-col h-full flex-1 overflow-hidden">
+            <div
+              className={`flex flex-col h-full flex-1 overflow-hidden transition-opacity duration-200 opacity-100 pointer-events-auto ${
+                sidebarPanelOpen ? 'lg:opacity-100 lg:pointer-events-auto' : 'lg:opacity-0 lg:pointer-events-none'
+              }`}
+            >
               {/* Enhanced Header */}
               <div className="flex items-center justify-between px-5 pt-6 pb-4 border-b border-white/10 relative overflow-hidden">
             {/* Background gradient overlay */}
@@ -229,14 +266,9 @@ function AppContent() {
 
             <div className="flex items-center space-x-3 relative z-10">
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center ai-glow shadow-lg hover:shadow-xl transition-all duration-300 group"
-                style={sidebarThemeEnabled ? {
-                  background: `linear-gradient(135deg, ${getCurrentTheme().primaryColor}, ${getCurrentTheme().secondaryColor}, ${getCurrentTheme().accentColor})`
-                } : {
-                  background: 'linear-gradient(135deg, #3b82f6, #06b6d4, #60a5fa)'
-                }}
+                className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/5 border border-white/15 shadow-lg hover:shadow-xl transition-all duration-300 group"
               >
-                <Bot className="h-7 w-7 text-white group-hover:scale-110 transition-transform duration-300" />
+                <LogoMark className="h-8 w-8 group-hover:scale-110 transition-transform duration-300" />
               </div>
               <div>
                 <h1
@@ -249,15 +281,15 @@ function AppContent() {
                 >
                   Adiva AI
                 </h1>
-                <p
+                {/* <p
                   className="text-sm"
                   style={sidebarThemeEnabled ? { color: getCurrentTheme().primaryColor } : { color: '#60a5fa' }}
                 >
                   Intelligent Assistant
-                </p>
+                </p> */}
               </div>
             </div>
-            <Button
+            {/* <Button
               variant="ghost"
               size="sm"
               className="lg:hidden hover:text-white hover:bg-white/10 rounded-lg transition-all duration-300"
@@ -265,7 +297,7 @@ function AppContent() {
               onClick={() => setSidebarOpen(false)}
             >
               <X className="h-5 w-5" />
-            </Button>
+            </Button> */}
           </div>
 
           {/* New Chat Button */}
@@ -279,6 +311,7 @@ function AppContent() {
               }}
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('startNewChat'));
+                window.dispatchEvent(new CustomEvent('closeSidebarMobile'));
               }}
             >
               <Plus className="h-5 w-5 mr-3 group-hover:scale-110 transition-transform duration-300" />
@@ -389,16 +422,21 @@ function AppContent() {
             size="sm"
             className="hover:text-white hover:bg-white/10 rounded-lg"
             style={sidebarThemeEnabled ? { color: getCurrentTheme().primaryColor } : { color: '#60a5fa' }}
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => {
+              if (!sidebarOpen) {
+                setSidebarPanelOpen(true);
+              }
+              setSidebarOpen((prev) => !prev);
+            }}
           >
-            <Menu className="h-6 w-6" />
+            {sidebarOpen ? <PanelLeftClose className="h-6 w-6" /> : <PanelLeftOpen className="h-6 w-6" />}
           </Button>
         </div>
 
         {/* Chat Area */}
         <div className="flex-1 overflow-hidden">
           <div className="h-full max-w-6xl mx-auto px-2 sm:px-4">
-            <AIchat
+            <MemoAIchat
               showSettings={showSettings}
               setShowSettings={setShowSettings}
               showAnalytics={showAnalytics}
@@ -411,9 +449,10 @@ function AppContent() {
       </div>
 
       {/* Mobile Overlay */}
-      {sidebarOpen && (
+      {sidebarOpen && sidebarPanelOpen && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/45 z-40 lg:hidden"
+          data-sidebar-overlay="true"
           onClick={() => setSidebarOpen(false)}
         />
       )}

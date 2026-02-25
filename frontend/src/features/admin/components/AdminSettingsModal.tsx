@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Card, CardContent, CardTitle } from '../ui/card';
-import { Switch } from '../ui/switch';
+import React, { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 import { Shield, Sliders, X, CheckCircle, AlertCircle, Lock, Users } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/shared/config/api';
 
 interface AdminSettingsModalProps {
   isOpen: boolean;
@@ -64,7 +65,7 @@ const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({ isOpen, onClose
       setError('Missing auth token');
       return;
     }
-    fetch('http://localhost:3001/api/admin/settings', {
+    fetch(`${API_BASE_URL}/admin/settings`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json'
@@ -93,7 +94,7 @@ const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({ isOpen, onClose
       setUsersError('Missing auth token');
       return;
     }
-    fetch('http://localhost:3001/api/admin/users', {
+    fetch(`${API_BASE_URL}/admin/users`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json'
@@ -129,7 +130,7 @@ const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({ isOpen, onClose
     setError('');
     setSuccess('');
     try {
-      const response = await fetch('http://localhost:3001/api/admin/settings', {
+      const response = await fetch(`${API_BASE_URL}/admin/settings`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -158,8 +159,8 @@ const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({ isOpen, onClose
   if (!isOpen || !isAdmin) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[90] flex items-center justify-center p-4 overflow-y-auto">
-      <Card className="w-full max-w-4xl mx-auto glass-dark border border-white/20 shadow-2xl relative overflow-hidden my-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[90] flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <Card className="w-[calc(100vw-0.75rem)] sm:w-full max-w-4xl mx-auto glass-dark border border-white/20 shadow-2xl relative overflow-hidden my-2 sm:my-4 max-h-[94vh]">
         <div className="relative overflow-hidden px-5 py-4 border-b border-white/10">
           <div
             className="absolute inset-0"
@@ -188,7 +189,7 @@ const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({ isOpen, onClose
           </div>
         </div>
 
-        <CardContent className="space-y-4 p-4">
+        <CardContent className="space-y-4 p-3 sm:p-4 overflow-y-auto max-h-[calc(94vh-5.5rem)]">
           <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full p-1 w-fit">
             <button
               onClick={() => setActiveTab('settings')}
@@ -249,7 +250,7 @@ const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({ isOpen, onClose
 
                 <div className="rounded-2xl p-4 bg-white/5 border border-white/10">
                   <h4 className="text-base font-semibold text-white mb-3">Limits</h4>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <label className="text-xs text-gray-300">Max tokens</label>
                       <Input
@@ -385,7 +386,7 @@ const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({ isOpen, onClose
               ) : (
                 <div className="max-h-56 overflow-y-auto space-y-2">
                   {users.map((u, idx) => (
-                    <div key={`${u.email}-${idx}`} className="flex items-center justify-between text-xs text-gray-200 bg-white/5 rounded-lg px-3 py-2 border border-white/10">
+                    <div key={`${u.email}-${idx}`} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-gray-200 bg-white/5 rounded-lg px-3 py-2 border border-white/10">
                       <div className="min-w-0">
                         <div className="text-white font-medium truncate">{u.name || 'Unnamed'}</div>
                         <div className="text-[11px] text-blue-200/80 truncate">{u.email}</div>

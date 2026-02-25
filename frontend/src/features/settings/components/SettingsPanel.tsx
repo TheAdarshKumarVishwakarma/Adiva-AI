@@ -8,7 +8,6 @@ import {
     Eye,
     Download,
     Zap,
-    Keyboard,
     Info,
     Settings2,
     Sparkles,
@@ -20,12 +19,18 @@ import {
     RotateCcw,
     Database,
     Wifi,
-    WifiOff,
     CheckCircle,
     XCircle,
     AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/shared/config/api';
+
+type ToolPermissions = {
+    web_search: boolean;
+    calculator: boolean;
+    code_runner: boolean;
+};
 
 interface SettingsPanelProps {
     isOpen: boolean;
@@ -51,6 +56,8 @@ interface SettingsPanelProps {
     availableThemes: any[];
     availableLanguages: Array<{ code: string; name: string }>;
     getCurrentTheme: () => any;
+    toolPermissions: ToolPermissions;
+    setToolPermissions: React.Dispatch<React.SetStateAction<ToolPermissions>>;
 }
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -75,7 +82,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     availableModels,
     availableThemes,
     availableLanguages,
-    getCurrentTheme
+    getCurrentTheme,
+    toolPermissions,
+    setToolPermissions
 }) => {
     const { isAuthenticated, token } = useAuth();
     // New settings states
@@ -102,7 +111,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     React.useEffect(() => {
         const checkBackendStatus = async () => {
             try {
-                const response = await fetch('http://localhost:3001/api/analytics/overview');
+                const response = await fetch(`${API_BASE_URL}/analytics/overview`);
                 setBackendStatus(response.ok ? 'online' : 'offline');
             } catch {
                 setBackendStatus('offline');
@@ -118,7 +127,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const clearAllData = () => {
         if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
             if (isAuthenticated && token) {
-                fetch('http://localhost:3001/api/user/chats', {
+                fetch(`${API_BASE_URL}/user/chats`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -142,7 +151,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const exportAllChats = () => {
         try {
             if (isAuthenticated && token) {
-                fetch('http://localhost:3001/api/user/export', {
+                fetch(`${API_BASE_URL}/user/export`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
@@ -208,7 +217,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     try {
                         const data = JSON.parse(e.target?.result as string);
                         if (isAuthenticated && token) {
-                            fetch('http://localhost:3001/api/user/chats/import', {
+                            fetch(`${API_BASE_URL}/user/chats/import`, {
                                 method: 'POST',
                                 headers: {
                                     'Authorization': `Bearer ${token}`,
@@ -265,6 +274,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             model: selectedModel,
             speechEnabled,
             defensiveMode,
+            toolPermissions,
             saveHistory,
             autoDelete,
             shareAnalytics,
@@ -294,6 +304,40 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         URL.revokeObjectURL(url);
     };
 
+    const settingAppliers: Record<string, (value: any) => void> = {
+        theme: (value) => setSelectedTheme(value),
+        interfaceLanguage: (value) => setInterfaceLanguage(value),
+        speechLanguage: (value) => setSpeechLanguage(value),
+        language: (value) => setInterfaceLanguage(value),
+        personality: (value) => setPersonality(value),
+        model: (value) => setSelectedModel(value),
+        speechEnabled: (value) => setSpeechEnabled(value),
+        defensiveMode: (value) => setDefensiveMode(value),
+        toolPermissions: (value) => {
+            if (!value || typeof value !== 'object') return;
+            setToolPermissions((prev) => ({
+                ...prev,
+                ...value
+            }));
+        },
+        saveHistory: (value) => setSaveHistory(value),
+        autoDelete: (value) => setAutoDelete(value),
+        shareAnalytics: (value) => setShareAnalytics(value),
+        temperature: (value) => setTemperature(value),
+        maxTokens: (value) => setMaxTokens(value),
+        streamResponses: (value) => setStreamResponses(value),
+        soundNotifications: (value) => setSoundNotifications(value),
+        desktopNotifications: (value) => setDesktopNotifications(value),
+        showTyping: (value) => setShowTyping(value),
+        highContrast: (value) => setHighContrast(value),
+        largeText: (value) => setLargeText(value),
+        keyboardShortcuts: (value) => setKeyboardShortcuts(value),
+        autoScroll: (value) => setAutoScroll(value),
+        enableCaching: (value) => setEnableCaching(value),
+        lazyLoadImages: (value) => setLazyLoadImages(value),
+        reduceAnimations: (value) => setReduceAnimations(value)
+    };
+
     const restoreSettings = () => {
         const input = document.createElement('input');
         input.type = 'file';
@@ -306,10 +350,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     try {
                         const settings = JSON.parse(e.target?.result as string);
                         // Apply all settings
-                        Object.keys(settings).forEach(key => {
-                            const setter = eval(`set${key.charAt(0).toUpperCase() + key.slice(1)}`);
-                            if (typeof setter === 'function') {
-                                setter(settings[key]);
+                        Object.keys(settings).forEach((key) => {
+                            const applySetting = settingAppliers[key];
+                            if (applySetting) {
+                                applySetting(settings[key]);
                             }
                         });
                         alert('Settings restored successfully!');
@@ -344,9 +388,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+        <div className="fixed inset-0 lg:absolute lg:inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-md p-2 sm:p-4 overflow-y-auto">
             <div
-                className="settings-panel glass-dark border border-white/20 rounded-2xl shadow-2xl p-4 sm:p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto"
+                className="settings-panel glass-dark border border-white/20 rounded-2xl shadow-2xl p-3 sm:p-6 w-[calc(100vw-0.75rem)] sm:w-full max-w-5xl max-h-[94vh] sm:max-h-[90vh] overflow-y-auto my-2 sm:my-4"
                 style={{
                     background: `linear-gradient(135deg, ${getCurrentTheme().primaryColor}05, ${getCurrentTheme().secondaryColor}05, ${getCurrentTheme().accentColor}05)`
                 }}
@@ -358,7 +402,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                             background: `linear-gradient(120deg, ${getCurrentTheme().primaryColor}55, ${getCurrentTheme().secondaryColor}45, ${getCurrentTheme().accentColor}35)`
                         }}
                     ></div>
-                    <div className="relative z-10 flex items-center justify-between px-5 py-4">
+                    <div className="relative z-10 flex items-center justify-between px-3 sm:px-5 py-3 sm:py-4 gap-3">
                         <div className="flex items-center gap-3">
                             <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-white/15 backdrop-blur-sm border border-white/20">
                                 <Settings2 className="h-5 w-5 text-white" />
@@ -379,7 +423,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
                 
 <div className="space-y-4">
-    <div className="flex flex-wrap gap-2 bg-white/5 border border-white/10 rounded-2xl p-2">
+    <div className="flex gap-2 bg-white/5 border border-white/10 rounded-2xl p-2 overflow-x-auto whitespace-nowrap">
         <button
             onClick={() => setActiveTab('ai')}
             className={`px-3 py-1.5 text-xs rounded-xl transition-all ${activeTab === 'ai'
@@ -522,6 +566,46 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     </div>
                 </div>
             </details>
+
+            <details className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                <summary className="cursor-pointer select-none flex items-center justify-between text-white font-semibold">
+                    <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" style={{ color: getCurrentTheme().primaryColor }} />
+                        Tool Permissions
+                    </div>
+                </summary>
+                <div className="mt-3 space-y-3">
+                    <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                        These permissions control which tools can run from Tool Actions.
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-white text-sm">Web Search</span>
+                        <Switch checked={toolPermissions.web_search} onCheckedChange={(checked) => setToolPermissions((prev) => ({ ...prev, web_search: checked }))} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-white text-sm">Calculator</span>
+                        <Switch checked={toolPermissions.calculator} onCheckedChange={(checked) => setToolPermissions((prev) => ({ ...prev, calculator: checked }))} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-white text-sm">Code Runner</span>
+                        <Switch checked={toolPermissions.code_runner} onCheckedChange={(checked) => setToolPermissions((prev) => ({ ...prev, code_runner: checked }))} />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <Button
+                            onClick={() => setToolPermissions({ web_search: true, calculator: true, code_runner: true })}
+                            className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 border border-emerald-400/30"
+                        >
+                            Allow All
+                        </Button>
+                        <Button
+                            onClick={() => setToolPermissions({ web_search: false, calculator: false, code_runner: false })}
+                            className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-100 border border-rose-400/30"
+                        >
+                            Disable All
+                        </Button>
+                    </div>
+                </div>
+            </details>
         </div>
     )}
 
@@ -535,7 +619,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     </div>
                 </summary>
                 <div className="mt-3">
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {availableThemes.map((theme) => (
                             <button
                                 key={theme.id}
