@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import UserSettings from './UserSettings.js';
+import UserAnalytics from './UserAnalytics.js';
+import Chat from './Chat.js';
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -132,25 +135,21 @@ userSchema.methods.updateLastLogin = function() {
 
 // Method to get user settings
 userSchema.methods.getSettings = async function() {
-  const UserSettings = mongoose.model('UserSettings');
   return await UserSettings.getOrCreateUserSettings(this._id);
 };
 
 // Method to get user analytics
 userSchema.methods.getAnalytics = async function() {
-  const UserAnalytics = mongoose.model('UserAnalytics');
   return await UserAnalytics.getOrCreateUserAnalytics(this._id);
 };
 
 // Method to get user chats
 userSchema.methods.getChats = async function(options = {}) {
-  const Chat = mongoose.model('Chat');
   return await Chat.getUserChats(this._id, options);
 };
 
 // Method to create a new chat
 userSchema.methods.createChat = async function(title, conversationId) {
-  const Chat = mongoose.model('Chat');
   const chat = new Chat({
     user: this._id,
     title,
@@ -177,10 +176,6 @@ userSchema.methods.getFullProfile = async function() {
 
 // Method to delete user and all related data
 userSchema.methods.deleteUserData = async function() {
-  const Chat = mongoose.model('Chat');
-  const UserSettings = mongoose.model('UserSettings');
-  const UserAnalytics = mongoose.model('UserAnalytics');
-
   // Delete all related data
   await Promise.all([
     Chat.deleteMany({ user: this._id }),

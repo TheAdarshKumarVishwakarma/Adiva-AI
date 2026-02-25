@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../shared/config/api';
+
 interface ImageProcessingRequest {
   image: File;
   message: string;
@@ -19,8 +21,6 @@ interface ImageProcessingResponse {
 }
 
 export class ImageProcessingService {
-  private static readonly API_BASE_URL = 'http://localhost:3001/api';
-
   /**
    * Process image with AI using the chat-with-image endpoint
    */
@@ -42,7 +42,7 @@ export class ImageProcessingService {
       formData.append('modelId', request.modelId);
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`${this.API_BASE_URL}/chat-with-image`, {
+      const response = await fetch(`${API_BASE_URL}/chat-with-image`, {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
         credentials: 'include',
@@ -97,7 +97,7 @@ export class ImageProcessingService {
       const fullPrompt = `${imagePrompt}\n\n[Image attached: ${request.image.name}]\n\nPlease analyze this image and provide a detailed description of what you see.`;
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`${this.API_BASE_URL}/chat`, {
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

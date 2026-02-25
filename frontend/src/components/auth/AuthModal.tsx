@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Bot, Mail, Lock, User, Eye, EyeOff, Loader2, X } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Loader2, X } from 'lucide-react';
+import LogoMark from '../../shared/components/LogoMark';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -89,11 +90,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, mode, onClose, onSwitchMo
       <div className="relative w-full max-w-md glass-dark border border-white/20 rounded-2xl shadow-2xl p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center ai-glow shadow-lg"
-              style={{ background: 'linear-gradient(135deg, #3b82f6, #06b6d4, #60a5fa)' }}
-            >
-              <Bot className="h-6 w-6 text-white" />
+            <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center bg-white/[0.06] border border-white/20 shadow-lg overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 via-blue-400/5 to-transparent" />
+              <LogoMark className="relative z-10 h-9 w-9 object-contain" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">

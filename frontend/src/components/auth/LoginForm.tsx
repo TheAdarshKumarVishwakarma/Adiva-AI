@@ -3,8 +3,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Bot, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import GoogleSignInButton from './GoogleSignInButton';
+import LogoMark from '../../shared/components/LogoMark';
 
 interface LoginFormProps {
   onSwitchToRegister: () => void;
@@ -67,7 +68,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onLoginSucces
                style={{
                  background: 'linear-gradient(135deg, #3b82f6, #06b6d4, #60a5fa)'
                }}>
-            <Bot className="h-8 w-8 text-white" />
+            <LogoMark className="h-8 w-8" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold text-white">Welcome Back</CardTitle>

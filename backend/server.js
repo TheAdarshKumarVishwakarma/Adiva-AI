@@ -24,10 +24,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
+const SESSION_SECRET = process.env.SESSION_SECRET;
+const FRONTEND_URL = process.env.FRONTEND_URL;
+
+if (NODE_ENV === 'production' && !SESSION_SECRET) {
+  throw new Error('SESSION_SECRET is required in production');
+}
 
 // Verify production mode
 if (NODE_ENV === 'production') {
@@ -56,8 +61,18 @@ app.use(helmet({
 }));
 
 // CORS configuration
+const allowedOrigins = new Set(
+  [FRONTEND_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'].filter(Boolean)
+);
+
 const corsOptions = {
-  origin: true, // Allow all origins
+  origin: (origin, callback) => {
+    // Non-browser clients (no Origin) are allowed.
+    if (!origin) return callback(null, true);
+    if (NODE_ENV !== 'production') return callback(null, true);
+    if (allowedOrigins.has(origin)) return callback(null, true);
+    return callback(new Error('CORS origin not allowed'));
+  },
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -86,7 +101,7 @@ app.use(apiRateLimiter);
 
 // Session middleware for OAuth
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  secret: SESSION_SECRET || 'dev-only-session-secret-change-me',
   resave: false,
   saveUninitialized: false,
   cookie: {

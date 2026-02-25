@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { API_BASE_URL } from '../shared/config/api';
 
 interface User {
   id: string;
@@ -31,10 +32,11 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState(true);
 
-  const isAuthenticated = !!user && !!token;
+  // Treat presence of a token as authenticated during hydration to avoid guest-UI flicker on refresh.
+  const isAuthenticated = !!token;
 
   // Check for existing token on mount
   useEffect(() => {
@@ -42,9 +44,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const storedToken = localStorage.getItem('token');
         if (storedToken) {
-          setToken(storedToken);
           // Verify token by fetching user profile
-          const response = await fetch('http://localhost:3001/api/auth/me', {
+          const response = await fetch(`${API_BASE_URL}/auth/me`, {
             headers: {
               'Authorization': `Bearer ${storedToken}`,
               'Content-Type': 'application/json'
@@ -53,6 +54,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           if (response.ok) {
             const data = await response.json();
+            setToken(storedToken);
             setUser(data.data.user);
           } else {
             // Token is invalid, clear it
@@ -75,7 +77,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:3001/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -104,7 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (name: string, email: string, password: string): Promise<{ success: boolean; message: string }> => {
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:3001/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -136,7 +138,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('token');
     
     // Call logout endpoint to clear server-side session
-    fetch('http://localhost:3001/api/auth/logout', {
+    fetch(`${API_BASE_URL}/auth/logout`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -148,7 +150,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = async (name?: string, email?: string): Promise<{ success: boolean; message: string }> => {
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:3001/api/auth/profile', {
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -179,7 +181,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!token) {
         return { success: false, message: 'You are not logged in. Please login again.' };
       }
-      const response = await fetch('http://localhost:3001/api/auth/change-password', {
+      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -210,7 +212,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('token', token);
       
       // Fetch user profile with the token
-      const response = await fetch('http://localhost:3001/api/auth/me', {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -219,7 +221,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData.user);
+        setUser(userData?.data?.user || null);
       } else {
         throw new Error('Failed to fetch user profile');
       }
@@ -234,7 +236,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Initiate Google OAuth login
   const initiateGoogleLogin = () => {
-    window.location.href = 'http://localhost:3001/api/auth/google';
+    window.location.href = `${API_BASE_URL}/auth/google`;
   };
 
   const value: AuthContextType = {

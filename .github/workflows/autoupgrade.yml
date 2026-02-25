@@ -1,0 +1,76 @@
+name: Auto Upgrade PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: "Backlog task ID (example: P1-FE-001)"
+        required: true
+        type: string
+      dry_run:
+        description: "If true, create proposal only (no code edits expected)"
+        required: true
+        type: boolean
+        default: true
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  propose-upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate upgrade proposal artifact
+        shell: bash
+        run: |
+          mkdir -p autoupgrade/runs
+          RUN_ID="$(date +%Y%m%d-%H%M%S)"
+          TASK_ID="${{ github.event.inputs.task_id || 'SCHEDULED-RUN' }}"
+          DRY_RUN="${{ github.event.inputs.dry_run || 'true' }}"
+          cat > "autoupgrade/runs/${RUN_ID}.md" <<EOF
+          # Auto Upgrade Proposal
+
+          - Run ID: ${RUN_ID}
+          - Task ID: ${TASK_ID}
+          - Dry Run: ${DRY_RUN}
+          - Commit SHA: ${{ github.sha }}
+
+          ## Checklist
+          - [ ] Map current state
+          - [ ] Propose minimal scoped change
+          - [ ] Run CI checks
+          - [ ] Request human approval
+
+          ## Notes
+          This scaffold workflow creates a proposal PR.
+          Replace this step with your coding agent execution once ready.
+          EOF
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(auto-upgrade): create upgrade proposal"
+          branch: "auto/upgrade-${{ github.run_id }}"
+          title: "chore(auto-upgrade): proposal for ${{ github.event.inputs.task_id || 'scheduled run' }}"
+          body: |
+            This PR was created by the Auto Upgrade workflow.
+
+            - Mode: proposal scaffold
+            - Task: `${{ github.event.inputs.task_id || 'SCHEDULED-RUN' }}`
+            - Dry run: `${{ github.event.inputs.dry_run || 'true' }}`
+
+            Human approval is required before any merge.
+          labels: |
+            auto-upgrade
+            needs-review

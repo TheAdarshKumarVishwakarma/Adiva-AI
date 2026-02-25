@@ -5,6 +5,7 @@ import aiModelsRoutes from './ai-models.js';
 import authRoutes from './auth.js';
 import userRoutes from './user.js';
 import adminRoutes from './admin.js';
+import toolsRoutes from './tools.js';
 
 const router = express.Router();
 
@@ -18,6 +19,7 @@ router.use(`${API_VERSION}/admin`, adminRoutes);
 router.use(API_VERSION, chatRoutes);
 router.use(API_VERSION, analyticsRoutes);
 router.use(API_VERSION, aiModelsRoutes);
+router.use(API_VERSION, toolsRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {
@@ -88,6 +90,10 @@ router.get('/api-docs', (req, res) => {
         'POST /api/ai-models/generate': 'Generate response with specific model',
         'POST /api/ai-models/compare': 'Compare responses from multiple models',
         'GET /api/ai-models/capabilities': 'Get model capabilities by category'
+      },
+      tools: {
+        'GET /api/tools': 'List supported tools',
+        'POST /api/tools/execute': 'Execute a tool action with permission gate'
       }
     },
     timestamp: new Date().toISOString()

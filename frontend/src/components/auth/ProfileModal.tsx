@@ -150,8 +150,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onOpenAdmi
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[90] flex items-center justify-center p-4 overflow-y-auto">
-      <Card className="w-full max-w-5xl mx-auto glass-dark border border-white/20 shadow-2xl relative overflow-hidden my-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[90] flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <Card className="w-[calc(100vw-0.75rem)] sm:w-full max-w-5xl mx-auto glass-dark border border-white/20 shadow-2xl relative overflow-hidden my-2 sm:my-4 max-h-[94vh]">
         <div className="relative overflow-hidden px-5 py-4 border-b border-white/10">
           <div
             className="absolute inset-0"
@@ -180,7 +180,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onOpenAdmi
           </div>
         </div>
 
-        <CardContent className="space-y-4 p-4">
+        <CardContent className="space-y-4 p-3 sm:p-4 overflow-y-auto max-h-[calc(94vh-5.5rem)]">
           {(error || success) && (
             <div
               className={`flex items-center gap-2 text-xs rounded-xl border px-3 py-2 ${
@@ -548,7 +548,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onOpenAdmi
             </div>
           </div>
 
-          <div className="rounded-2xl p-4 bg-white/5 border border-white/10 flex items-center justify-between">
+          <div className="rounded-2xl p-4 bg-white/5 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
                 <LogOut className="h-4 w-4 text-red-400" />

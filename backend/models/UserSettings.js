@@ -159,6 +159,11 @@ const userSettingsSchema = new mongoose.Schema({
       type: String,
       default: null,
       maxlength: [500, 'API endpoint cannot exceed 500 characters']
+    },
+    toolPermissions: {
+      web_search: { type: Boolean, default: true },
+      calculator: { type: Boolean, default: true },
+      code_runner: { type: Boolean, default: true }
     }
   }
 }, {
@@ -216,7 +221,12 @@ userSettingsSchema.methods.resetToDefaults = function() {
   
   this.advanced = {
     customSystemPrompt: null,
-    apiEndpoint: null
+    apiEndpoint: null,
+    toolPermissions: {
+      web_search: true,
+      calculator: true,
+      code_runner: true
+    }
   };
   
   return this.save();

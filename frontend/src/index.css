@@ -253,6 +253,21 @@ body.theme-ocean {
   background-clip: text;
 }
 
+@keyframes regen-progress-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+.regen-progress-fill {
+  width: 42%;
+  animation: regen-progress-slide 1.15s linear infinite;
+  will-change: transform;
+}
+
 /* Floating animation for AI elements */
 .float-animation {
   animation: float 6s ease-in-out infinite;
@@ -352,8 +367,8 @@ body.theme-ocean {
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98));
   border: 1px solid rgba(99, 102, 241, 0.25);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(22px);
-  overflow: visible;
+  backdrop-filter: blur(12px);
+  overflow: hidden;
 }
 
 .sidebar-rail {
@@ -362,6 +377,7 @@ body.theme-ocean {
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   position: relative;
   z-index: 2;
+  /* border-radius: 28px 0 0 28px; */
 }
 
 .rail-btn {
@@ -374,7 +390,7 @@ body.theme-ocean {
   color: #93c5fd;
   background: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.2);
-  transition: all 0.2s ease;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
   position: relative;
 }
 
@@ -511,12 +527,12 @@ body.theme-ocean {
 .chat-stream::before {
   content: '';
   position: absolute;
-  left: 24px;
-  top: 0;
-  bottom: 0;
+  left: 58px;
+  top: 10px;
+  bottom: 12px;
   width: 2px;
   background: linear-gradient(180deg, rgba(59, 130, 246, 0.45), rgba(6, 182, 212, 0.1), transparent);
-  opacity: 0.5;
+  opacity: 0.28;
 }
 
 .chat-card {
@@ -542,9 +558,9 @@ body.theme-ocean {
 }
 
 .chat-card-user {
-  background: linear-gradient(135deg, rgba(126, 34, 206, 0.78), rgba(99, 102, 241, 0.8));
-  border-right: 3px solid rgba(232, 121, 249, 0.65);
-  box-shadow: 0 16px 30px rgba(124, 58, 237, 0.35);
+  background: linear-gradient(135deg, rgba(12, 18, 34, 0.92), rgba(5, 10, 22, 0.98));
+  border-right: 3px solid rgba(96, 165, 250, 0.6);
+  /* box-shadow: 0 16px 30px rgba(124, 58, 237, 0.35); */
 }
 
 .chat-input-dock {
@@ -555,7 +571,7 @@ body.theme-ocean {
 
 @media (max-width: 768px) {
   .chat-stream::before {
-    left: 12px;
+    left: 42px;
   }
 }
 
@@ -609,18 +625,16 @@ body.theme-ocean {
 
 @media (max-width: 640px) {
   .sidebar-shell {
-    top: auto;
+    top: 0;
     bottom: 0;
     left: 0;
-    right: 0;
-    width: 100%;
-    height: 72vh;
-    transform: translateY(100%);
-    border-radius: 24px 24px 0 0;
+    right: auto;
+    height: 100vh;
+    border-radius: 0;
   }
 
   .sidebar-shell[data-open="true"] {
-    transform: translateY(0);
+    transform: translateX(0);
   }
 
   .sidebar-float {
@@ -638,7 +652,7 @@ body.theme-ocean {
     padding: 10px 12px;
   }
   .chat-stream::before {
-    left: 6px;
+    left: 34px;
   }
   .chat-card {
     border-radius: 14px;
