@@ -82,7 +82,6 @@ const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({ isOpen, onClose
       })
       .catch((err) => setError(err?.message || 'Failed to load admin settings'))
       .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, isAdmin, authToken]);
 
   useEffect(() => {

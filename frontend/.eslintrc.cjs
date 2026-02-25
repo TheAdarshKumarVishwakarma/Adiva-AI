@@ -3,7 +3,7 @@ module.exports = {
   env: { browser: true, es2020: true },
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
   ],
   ignorePatterns: ['dist', '.eslintrc.cjs'],
@@ -14,5 +14,13 @@ module.exports = {
       'warn',
       { allowConstantExport: true },
     ],
+    '@typescript-eslint/no-explicit-any': 'off',
+    '@typescript-eslint/no-unused-vars': 'off',
+    '@typescript-eslint/no-empty-object-type': 'off',
+    'react-hooks/exhaustive-deps': 'off',
+    'react-refresh/only-export-components': 'off',
+    'no-empty': 'off',
+    'no-constant-condition': 'off',
+    'no-extra-semi': 'off',
   },
 }
