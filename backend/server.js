@@ -27,11 +27,11 @@ const app = express();
 
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const SESSION_SECRET = process.env.SESSION_SECRET;
-const FRONTEND_URL = process.env.FRONTEND_URL;
+const SESSION_SECRET = process.env.SESSION_SECRET || process.env.JWT_SECRET;
+const FRONTEND_URL = process.env.FRONTEND_URL || process.env.CLIENT_ORIGIN;
 
 if (NODE_ENV === 'production' && !SESSION_SECRET) {
-  throw new Error('SESSION_SECRET is required in production');
+  throw new Error('SESSION_SECRET (or JWT_SECRET) is required in production');
 }
 
 // Verify production mode
