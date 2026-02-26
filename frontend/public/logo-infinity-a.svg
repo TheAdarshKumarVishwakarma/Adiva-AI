@@ -1,0 +1,36 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="24" y1="24" x2="232" y2="232" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22D3EE"/>
+      <stop offset="0.5" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#EC4899"/>
+    </linearGradient>
+    <linearGradient id="loop" x1="58" y1="128" x2="198" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A5F3FC"/>
+      <stop offset="1" stop-color="#E0E7FF"/>
+    </linearGradient>
+    <linearGradient id="crossbar" x1="96" y1="132" x2="160" y2="132" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#BAE6FD"/>
+      <stop offset="1" stop-color="#F5D0FE"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#bg)"/>
+
+  <!-- Infinity loop forming an A silhouette -->
+  <path
+    d="M60 142C60 112 84 92 110 92C126 92 139 100 152 116C165 100 178 92 194 92C218 92 236 110 236 134C236 158 218 176 194 176C178 176 165 168 152 152C139 168 126 176 110 176C84 176 60 156 60 126"
+    stroke="url(#loop)"
+    stroke-width="16"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    transform="translate(-20 0)"
+  />
+
+  <!-- A crossbar -->
+  <path d="M96 132H160" stroke="url(#crossbar)" stroke-width="11" stroke-linecap="round"/>
+
+  <!-- subtle center spark -->
+  <circle cx="128" cy="126" r="4" fill="#FDE68A"/>
+</svg>
+
