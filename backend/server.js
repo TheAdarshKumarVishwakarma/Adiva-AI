@@ -29,6 +29,7 @@ const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const SESSION_SECRET = process.env.SESSION_SECRET || process.env.JWT_SECRET;
 const FRONTEND_URL = process.env.FRONTEND_URL || process.env.CLIENT_ORIGIN;
+const FRONTEND_URLS = process.env.FRONTEND_URLS || '';
 
 if (NODE_ENV === 'production' && !SESSION_SECRET) {
   throw new Error('SESSION_SECRET (or JWT_SECRET) is required in production');
@@ -61,8 +62,19 @@ app.use(helmet({
 }));
 
 // CORS configuration
+const extraFrontendOrigins = FRONTEND_URLS
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const allowedOrigins = new Set(
-  [FRONTEND_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'].filter(Boolean)
+  [
+    FRONTEND_URL,
+    ...extraFrontendOrigins,
+    'https://adiva-ai.vercel.app',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173'
+  ].filter(Boolean)
 );
 
 const corsOptions = {
@@ -71,7 +83,8 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     if (NODE_ENV !== 'production') return callback(null, true);
     if (allowedOrigins.has(origin)) return callback(null, true);
-    return callback(new Error('CORS origin not allowed'));
+    console.warn(`CORS blocked origin: ${origin}`);
+    return callback(null, false);
   },
   credentials: true,
   optionsSuccessStatus: 200,
