@@ -13,11 +13,13 @@ const parseCookies = (cookieHeader = '') => {
 };
 
 const setGuestCookie = (res, guestId) => {
+  const isProd = process.env.NODE_ENV === 'production';
   res.cookie(COOKIE_NAME, guestId, {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 30 * 24 * 60 * 60 * 1000
+    sameSite: isProd ? 'none' : 'lax',
+    secure: isProd,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    path: '/'
   });
 };
 
