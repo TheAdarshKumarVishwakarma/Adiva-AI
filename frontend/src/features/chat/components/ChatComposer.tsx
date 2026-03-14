@@ -57,7 +57,6 @@ export default function ChatComposer({
   stopVoiceInput,
   handleSendMessage
 }: ChatComposerProps) {
-  if (showAnalytics) return null;
   const [showActionMenu, setShowActionMenu] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
   const [isMultiline, setIsMultiline] = useState(false);
@@ -85,6 +84,8 @@ export default function ChatComposer({
     const isMulti = el.scrollHeight > singleLineHeight + 2;
     setIsMultiline(isMulti);
   }, [inputValue, inputRef]);
+
+  if (showAnalytics) return null;
 
   return (
     <div className="p-4 sm:p-8">

@@ -639,6 +639,9 @@ body.theme-ocean {
     left: 0;
     right: auto;
     height: 100vh;
+    height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
     border-radius: 0;
   }
 
@@ -648,6 +651,7 @@ body.theme-ocean {
 
   .sidebar-float {
     border-radius: 18px;
+    min-height: 100%;
   }
   .sidebar-rail {
     width: 3rem;
