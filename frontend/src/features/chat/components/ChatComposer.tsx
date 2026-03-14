@@ -177,22 +177,21 @@ export default function ChatComposer({
 
             <div ref={actionMenuRef} className={`shrink-0 relative ${shouldStackActions ? 'w-full flex justify-end pt-1' : ''}`}>
               <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1 backdrop-blur-xl">
-              <Tooltip content="More">
-                <Button
-                  onClick={() => setShowActionMenu((prev) => !prev)}
-                  disabled={isTyping || isUploadingImage}
-                  size="sm"
-                  className="h-8 w-8 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    color: 'rgba(255, 255, 255, 0.7)'
-                  }}
-                  aria-expanded={showActionMenu}
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </Tooltip>
+              <Button
+                onClick={() => setShowActionMenu((prev) => !prev)}
+                disabled={isTyping || isUploadingImage}
+                size="sm"
+                className="h-8 w-8 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: 'rgba(255, 255, 255, 0.7)'
+                }}
+                aria-expanded={showActionMenu}
+                aria-label="More actions"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
               {showActionMenu && (
                 <div className="absolute bottom-11 right-0 z-20 flex flex-col gap-2 rounded-2xl border border-white/15 bg-slate-900/90 backdrop-blur-xl p-2 shadow-xl">
                   <Button
