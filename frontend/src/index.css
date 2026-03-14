@@ -335,6 +335,15 @@ body.theme-ocean {
     linear-gradient(180deg, #050816 0%, #0b1226 45%, #070b18 100%);
 }
 
+/* Mobile viewport fix for browser UI (address bar) */
+.app-viewport {
+  min-height: 100vh;
+  height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* Canvas texture for chat area */
 .studio-canvas {
   position: relative;

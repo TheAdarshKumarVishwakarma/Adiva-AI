@@ -217,7 +217,7 @@ function AIchat({
     };
   }, [isOpen]);
 
-  const { isListening, isSpeaking, toggleVoiceInput, speakText, stopSpeaking } = useSpeechControls({
+  const { isListening, isSpeaking, startVoiceInput, stopVoiceInput, toggleVoiceInput, speakText, stopSpeaking } = useSpeechControls({
     speechLanguage,
     setInputValue
   });
@@ -890,6 +890,7 @@ function AIchat({
   };
 
   const executeToolAction = async () => {
+    stopSpeaking();
     const trimmed = toolInput.trim();
     if (!trimmed) return;
     if (!toolPermissions[selectedTool]) {
@@ -963,6 +964,7 @@ function AIchat({
   };
 
   const handleSendMessage = async () => {
+    stopSpeaking();
     if (!inputValue.trim() && !selectedImage) return;
 
     const userMessage: Message = {
@@ -1441,6 +1443,7 @@ function AIchat({
   };
 
   const regenerateMessage = async (messageId: string) => {
+    stopSpeaking();
     const messageIndex = messages.findIndex(m => m.id === messageId);
     if (messageIndex === -1) return;
 
@@ -2042,6 +2045,8 @@ function AIchat({
           handleImageSelect={handleImageSelect}
           handleKeyPress={handleKeyPress}
           toggleVoiceInput={toggleVoiceInput}
+          startVoiceInput={startVoiceInput}
+          stopVoiceInput={stopVoiceInput}
           handleSendMessage={handleSendMessage}
         />
 
