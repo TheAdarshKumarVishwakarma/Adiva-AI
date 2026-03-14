@@ -1,5 +1,5 @@
-import React from 'react';
-import { Send, Mic, MicOff, Camera, Library, Wrench } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Send, Mic, MicOff, Camera, Library, Wrench, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { ThemeOption } from '@/features/chat/types/chat';
@@ -26,6 +26,8 @@ interface ChatComposerProps {
   handleImageSelect: (file: File) => void;
   handleKeyPress: (e: React.KeyboardEvent) => void;
   toggleVoiceInput: () => void;
+  startVoiceInput: () => void;
+  stopVoiceInput: () => void;
   handleSendMessage: () => void;
 }
 
@@ -51,9 +53,38 @@ export default function ChatComposer({
   handleImageSelect,
   handleKeyPress,
   toggleVoiceInput,
+  startVoiceInput,
+  stopVoiceInput,
   handleSendMessage
 }: ChatComposerProps) {
   if (showAnalytics) return null;
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const actionMenuRef = useRef<HTMLDivElement | null>(null);
+  const [isMultiline, setIsMultiline] = useState(false);
+  const shouldStackActions = inputValue.trim().length > 0 || isMultiline;
+
+  useEffect(() => {
+    if (!showActionMenu) return;
+    const handleOutside = (event: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
+        setShowActionMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [showActionMenu]);
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const style = window.getComputedStyle(el);
+    const lineHeight = Number.parseFloat(style.lineHeight || '0') || 24;
+    const paddingTop = Number.parseFloat(style.paddingTop || '0') || 0;
+    const paddingBottom = Number.parseFloat(style.paddingBottom || '0') || 0;
+    const singleLineHeight = lineHeight + paddingTop + paddingBottom;
+    const isMulti = el.scrollHeight > singleLineHeight + 2;
+    setIsMultiline(isMulti);
+  }, [inputValue, inputRef]);
 
   return (
     <div className="p-4 sm:p-8">
@@ -75,8 +106,8 @@ export default function ChatComposer({
         )}
 
         <div className="relative">
-          <div className="flex items-end gap-2 sm:gap-3 p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl shadow-xl transition-all duration-300 focus-within:border-white/20 focus-within:shadow-2xl ring-1 ring-white/5 chat-input-dock">
-            <div className="flex-1 min-h-[52px] flex flex-col">
+          <div className={`flex ${shouldStackActions ? 'flex-col items-stretch' : 'items-end'} gap-2 sm:gap-3 p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl shadow-xl transition-all duration-300 focus-within:border-white/20 focus-within:shadow-2xl ring-1 ring-white/5 chat-input-dock`}>
+            <div className="flex-1 min-h-[48px] flex flex-col">
               {imagePreview && (
                 <div className="mb-2 p-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg w-fit">
                   <div className="flex items-center justify-between mb-1">
@@ -124,7 +155,7 @@ export default function ChatComposer({
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder={selectedImage ? 'Describe what you want to know about this image...' : 'Message Adiva AI...'}
-                className="w-full bg-transparent border-0 text-white text-sm sm:text-base placeholder:text-white/60 focus:ring-0 focus:outline-none resize-none min-h-[24px] max-h-[200px] py-2 sm:py-3 px-1 leading-relaxed"
+                className="w-full bg-transparent border-0 text-white text-sm sm:text-base placeholder:text-white/60 focus:ring-0 focus:outline-none resize-none min-h-[24px] max-h-[180px] py-2 sm:py-3 px-1 leading-relaxed break-words"
                 style={{
                   '--tw-ring-color': 'transparent',
                   lineHeight: '1.5'
@@ -133,10 +164,10 @@ export default function ChatComposer({
               />
             </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              <Tooltip content="Prompt Templates">
+            <div ref={actionMenuRef} className={`flex items-center gap-1.5 sm:gap-2 shrink-0 relative ${shouldStackActions ? 'w-full justify-end pt-1' : ''}`}>
+              <Tooltip content="More">
                 <Button
-                  onClick={openPromptTemplates}
+                  onClick={() => setShowActionMenu((prev) => !prev)}
                   disabled={isTyping || isUploadingImage}
                   size="sm"
                   className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -145,26 +176,33 @@ export default function ChatComposer({
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     color: 'rgba(255, 255, 255, 0.7)'
                   }}
+                  aria-expanded={showActionMenu}
                 >
-                  <Library className="h-4 w-4" />
+                  <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </Tooltip>
-
-              <Tooltip content="Tool Actions">
-                <Button
-                  onClick={openToolActions}
-                  disabled={isTyping || isUploadingImage}
-                  size="sm"
-                  className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    color: 'rgba(255, 255, 255, 0.7)'
-                  }}
-                >
-                  <Wrench className="h-4 w-4" />
-                </Button>
-              </Tooltip>
+              {showActionMenu && (
+                <div className="absolute bottom-11 right-0 z-20 flex flex-col gap-2 rounded-2xl border border-white/15 bg-slate-900/90 backdrop-blur-xl p-2 shadow-xl">
+                  <Button
+                    onClick={() => { openPromptTemplates(); setShowActionMenu(false); }}
+                    disabled={isTyping || isUploadingImage}
+                    size="sm"
+                    className="h-8 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                  >
+                    <Library className="h-4 w-4 mr-2" />
+                    Templates
+                  </Button>
+                  <Button
+                    onClick={() => { openToolActions(); setShowActionMenu(false); }}
+                    disabled={isTyping || isUploadingImage}
+                    size="sm"
+                    className="h-8 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                  >
+                    <Wrench className="h-4 w-4 mr-2" />
+                    Tools
+                  </Button>
+                </div>
+              )}
 
               <Tooltip content="Keyboard Shortcuts (Ctrl+?)">
                 <Button
@@ -231,9 +269,31 @@ export default function ChatComposer({
                 disabled={isTyping || isUploadingImage}
               />
 
-              <Tooltip content="Voice input">
+              <Tooltip content="Push to talk (hold), click to toggle">
                 <Button
-                  onClick={toggleVoiceInput}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    startVoiceInput();
+                  }}
+                  onMouseUp={(e) => {
+                    e.preventDefault();
+                    stopVoiceInput();
+                  }}
+                  onMouseLeave={() => {
+                    if (isListening) stopVoiceInput();
+                  }}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    startVoiceInput();
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    stopVoiceInput();
+                  }}
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                    // Keyboard activation produces detail 0; mouse click is already handled by hold events.
+                    if (e.detail === 0) toggleVoiceInput();
+                  }}
                   disabled={isTyping}
                   size="sm"
                   className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full transition-all duration-200 hover:scale-110"
@@ -251,7 +311,10 @@ export default function ChatComposer({
               </Tooltip>
 
               <Button
-                onClick={handleSendMessage}
+                onClick={() => {
+                  setShowActionMenu(false);
+                  handleSendMessage();
+                }}
                 disabled={(!inputValue.trim() && !selectedImage) || isTyping || isUploadingImage}
                 size="sm"
                 className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
