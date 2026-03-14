@@ -60,7 +60,9 @@ export default function ChatComposer({
   const [showActionMenu, setShowActionMenu] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
   const [isMultiline, setIsMultiline] = useState(false);
-  const shouldStackActions = inputValue.trim().length > 0 || isMultiline;
+  const pressStartRef = useRef<number | null>(null);
+  const stoppedOnPressRef = useRef(false);
+  const shouldStackActions = inputValue.trim().length > 0 || isMultiline || !!imagePreview;
 
   useEffect(() => {
     if (!showActionMenu) return;
@@ -110,38 +112,46 @@ export default function ChatComposer({
           <div className={`flex ${shouldStackActions ? 'flex-col items-stretch' : 'items-end'} gap-2 sm:gap-3 p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-3xl shadow-xl transition-all duration-300 focus-within:border-white/20 focus-within:shadow-2xl ring-1 ring-white/5 chat-input-dock`}>
             <div className="flex-1 min-h-[48px] flex flex-col">
               {imagePreview && (
-                <div className="mb-2 p-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg w-fit">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-blue-300 flex items-center gap-1">
-                      <span className="text-xs">IMG</span>
-                      Image:
-                    </span>
-                    <Button
-                      onClick={handleImageRemove}
-                      size="sm"
-                      className="h-4 w-4 p-0 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-400/30 transition-all duration-200 hover:scale-110"
-                      disabled={isUploadingImage}
-                    >
-                      <span className="text-xs">x</span>
-                    </Button>
-                  </div>
-                  <div className="relative">
+                <div className="mb-2 flex items-center gap-3 rounded-2xl border border-white/10 bg-gradient-to-r from-white/10 to-white/5 px-3 py-2 backdrop-blur-xl shadow-md">
+                  <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-white/15 bg-white/5">
                     <img
                       src={imagePreview}
                       alt="Preview"
-                      className="max-w-32 max-h-16 rounded object-cover shadow-sm cursor-pointer hover:opacity-80 transition-opacity duration-200"
+                      className="h-full w-full object-cover cursor-pointer transition-opacity duration-200 hover:opacity-80"
                       onClick={() => setShowImagePopup(true)}
                       title="Click to view full size"
                     />
                     {isUploadingImage && (
-                      <div className="absolute inset-0 bg-black/60 rounded flex items-center justify-center">
-                        <div className="flex flex-col items-center gap-1 text-white">
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                          <span className="text-xs">Processing...</span>
-                        </div>
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                       </div>
                     )}
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-blue-100 font-medium">Image attached</span>
+                      <Button
+                        onClick={handleImageRemove}
+                        size="sm"
+                        className="h-6 w-6 p-0 rounded-full bg-white/10 hover:bg-white/20 text-white/80 border border-white/15 transition-all duration-200 hover:scale-110"
+                        disabled={isUploadingImage}
+                      >
+                        <span className="text-xs">x</span>
+                      </Button>
+                    </div>
+                    <div className="text-[11px] text-white/70 truncate">
+                      {selectedImage?.name || 'Selected image'}
+                    </div>
+                    {isUploadingImage && (
+                      <div className="mt-1 text-[11px] text-amber-200">Processing…</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {isListening && (
+                <div className="mb-2 inline-flex items-center gap-2 self-start rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] text-emerald-100">
+                  <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+                  Listening…
                 </div>
               )}
               {imagePreview && !selectedModel.startsWith('claude-') && (
@@ -165,23 +175,23 @@ export default function ChatComposer({
               />
             </div>
 
-            <div ref={actionMenuRef} className={`flex items-center gap-1.5 sm:gap-2 shrink-0 relative ${shouldStackActions ? 'w-full justify-end pt-1' : ''}`}>
-              <Tooltip content="More">
-                <Button
-                  onClick={() => setShowActionMenu((prev) => !prev)}
-                  disabled={isTyping || isUploadingImage}
-                  size="sm"
-                  className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    color: 'rgba(255, 255, 255, 0.7)'
-                  }}
-                  aria-expanded={showActionMenu}
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </Tooltip>
+            <div ref={actionMenuRef} className={`shrink-0 relative ${shouldStackActions ? 'w-full flex justify-end pt-1' : ''}`}>
+              <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1 backdrop-blur-xl">
+              <Button
+                onClick={() => setShowActionMenu((prev) => !prev)}
+                disabled={isTyping || isUploadingImage}
+                size="sm"
+                className="h-8 w-8 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: 'rgba(255, 255, 255, 0.7)'
+                }}
+                aria-expanded={showActionMenu}
+                aria-label="More actions"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
               {showActionMenu && (
                 <div className="absolute bottom-11 right-0 z-20 flex flex-col gap-2 rounded-2xl border border-white/15 bg-slate-900/90 backdrop-blur-xl p-2 shadow-xl">
                   <Button
@@ -210,7 +220,7 @@ export default function ChatComposer({
                   onClick={() => setShowShortcuts(true)}
                   disabled={isTyping || isUploadingImage}
                   size="sm"
-                  className="hidden sm:inline-flex h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="hidden sm:inline-flex h-8 w-8 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     background: 'rgba(255, 255, 255, 0.1)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -227,7 +237,7 @@ export default function ChatComposer({
                   onClick={() => document.getElementById('image-upload')?.click()}
                   disabled={isTyping || isUploadingImage}
                   size="sm"
-                  className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-8 w-8 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     background: selectedImage
                       ? 'linear-gradient(135deg, #10b981, #059669)'
@@ -272,24 +282,29 @@ export default function ChatComposer({
 
               <Tooltip content="Push to talk (hold), click to toggle">
                 <Button
-                  onMouseDown={(e) => {
+                  onPointerDown={(e) => {
                     e.preventDefault();
+                    if (isListening) {
+                      stoppedOnPressRef.current = true;
+                      stopVoiceInput();
+                      return;
+                    }
+                    stoppedOnPressRef.current = false;
+                    pressStartRef.current = Date.now();
                     startVoiceInput();
                   }}
-                  onMouseUp={(e) => {
+                  onPointerUp={(e) => {
                     e.preventDefault();
-                    stopVoiceInput();
+                    if (stoppedOnPressRef.current) return;
+                    const start = pressStartRef.current;
+                    pressStartRef.current = null;
+                    const duration = start ? Date.now() - start : 0;
+                    if (duration >= 250) {
+                      stopVoiceInput();
+                    }
                   }}
-                  onMouseLeave={() => {
-                    if (isListening) stopVoiceInput();
-                  }}
-                  onTouchStart={(e) => {
-                    e.preventDefault();
-                    startVoiceInput();
-                  }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    stopVoiceInput();
+                  onPointerLeave={() => {
+                    if (isListening && !stoppedOnPressRef.current) stopVoiceInput();
                   }}
                   onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                     // Keyboard activation produces detail 0; mouse click is already handled by hold events.
@@ -297,7 +312,7 @@ export default function ChatComposer({
                   }}
                   disabled={isTyping}
                   size="sm"
-                  className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full transition-all duration-200 hover:scale-110"
+                  className="h-8 w-8 p-0 rounded-full transition-all duration-200 hover:scale-110"
                   style={{
                     background: isListening
                       ? 'linear-gradient(135deg, #ef4444, #ec4899)'
@@ -318,7 +333,7 @@ export default function ChatComposer({
                 }}
                 disabled={(!inputValue.trim() && !selectedImage) || isTyping || isUploadingImage}
                 size="sm"
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-9 w-9 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: (!inputValue.trim() && !selectedImage) || isTyping || isUploadingImage
                     ? 'rgba(255, 255, 255, 0.1)'
@@ -334,6 +349,7 @@ export default function ChatComposer({
                   <Send className="h-4 w-4" />
                 )}
               </Button>
+              </div>
             </div>
           </div>
         </div>
