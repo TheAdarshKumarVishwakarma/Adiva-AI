@@ -1586,7 +1586,7 @@ function AIchat({
       {/* Full Screen Chat Interface */}
       <div className="h-full flex flex-col relative">
         {/* Chat Header */}
-        <div className="p-4 sm:p-6">
+        <div className="p-4 sm:p-6 hidden lg:block">
           <div className="chat-header-neo">
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div

@@ -417,20 +417,26 @@ function AppContent() {
       <div className="flex-1 flex flex-col overflow-hidden studio-canvas">
         {/* Top Bar with Mobile Menu */}
         <div className="glass-dark border-b border-white/10 p-4 lg:hidden">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="hover:text-white hover:bg-white/10 rounded-lg"
-            style={sidebarThemeEnabled ? { color: getCurrentTheme().primaryColor } : { color: '#60a5fa' }}
-            onClick={() => {
-              if (!sidebarOpen) {
-                setSidebarPanelOpen(true);
-              }
-              setSidebarOpen((prev) => !prev);
-            }}
-          >
-            {sidebarOpen ? <PanelLeftClose className="h-6 w-6" /> : <PanelLeftOpen className="h-6 w-6" />}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hover:text-white hover:bg-white/10 rounded-lg"
+              style={sidebarThemeEnabled ? { color: getCurrentTheme().primaryColor } : { color: '#60a5fa' }}
+              onClick={() => {
+                if (!sidebarOpen) {
+                  setSidebarPanelOpen(true);
+                }
+                setSidebarOpen((prev) => !prev);
+              }}
+            >
+              {sidebarOpen ? <PanelLeftClose className="h-6 w-6" /> : <PanelLeftOpen className="h-6 w-6" />}
+            </Button>
+            <div className="flex items-center gap-2 min-w-0">
+              <LogoMark className="h-6 w-6 flex-shrink-0" />
+              <span className="text-xs text-blue-200 truncate">Ready to assist with any task</span>
+            </div>
+          </div>
         </div>
 
         {/* Chat Area */}
