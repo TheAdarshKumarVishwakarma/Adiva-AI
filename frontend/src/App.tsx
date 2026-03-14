@@ -127,7 +127,7 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="h-screen studio-shell flex overflow-hidden relative theme-ocean">
+      <div className="app-viewport studio-shell flex overflow-hidden relative theme-ocean">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/2 left-1/4 w-16 h-px bg-gradient-to-r from-transparent via-blue-400/20 to-transparent animate-pulse" style={{ animationDelay: '0.8s' }}></div>
           <div className="absolute top-1/3 right-1/4 w-12 h-px bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent animate-pulse" style={{ animationDelay: '1.8s' }}></div>
@@ -142,7 +142,7 @@ function AppContent() {
   }
 
   return (
-    <div className="h-screen studio-shell flex overflow-hidden relative theme-ocean">
+    <div className="app-viewport studio-shell flex overflow-hidden relative theme-ocean">
       {/* Enhanced Animated Background Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Neural network lines */}
