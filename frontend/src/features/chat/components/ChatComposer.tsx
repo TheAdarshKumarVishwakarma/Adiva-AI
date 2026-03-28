@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Send, Mic, MicOff, Camera, Library, Wrench, MoreHorizontal } from 'lucide-react';
+import { Send, Mic, MicOff, Camera, Library, Wrench, MoreHorizontal, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { ThemeOption } from '@/features/chat/types/chat';
@@ -29,6 +29,7 @@ interface ChatComposerProps {
   startVoiceInput: () => void;
   stopVoiceInput: () => void;
   handleSendMessage: () => void;
+  stopGeneration: () => void;
 }
 
 export default function ChatComposer({
@@ -55,7 +56,8 @@ export default function ChatComposer({
   toggleVoiceInput,
   startVoiceInput,
   stopVoiceInput,
-  handleSendMessage
+  handleSendMessage,
+  stopGeneration
 }: ChatComposerProps) {
   const [showActionMenu, setShowActionMenu] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
@@ -326,29 +328,43 @@ export default function ChatComposer({
                 </Button>
               </Tooltip>
 
-              <Button
-                onClick={() => {
-                  setShowActionMenu(false);
-                  handleSendMessage();
-                }}
-                disabled={(!inputValue.trim() && !selectedImage) || isTyping || isUploadingImage}
-                size="sm"
-                className="h-9 w-9 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  background: (!inputValue.trim() && !selectedImage) || isTyping || isUploadingImage
-                    ? 'rgba(255, 255, 255, 0.1)'
-                    : `linear-gradient(135deg, ${getCurrentTheme().primaryColor}, ${getCurrentTheme().secondaryColor})`,
-                  border: 'none',
-                  color: 'white'
-                }}
-                aria-label="Send message"
-              >
-                {isUploadingImage ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+              {isTyping ? (
+                <Button
+                  onClick={() => {
+                    setShowActionMenu(false);
+                    stopGeneration();
+                  }}
+                  size="sm"
+                  className="h-9 w-9 p-0 rounded-full transition-all duration-200 hover:scale-110 bg-red-500/20 hover:bg-red-500/30 text-red-100 border border-red-400/30"
+                  aria-label="Stop generating"
+                >
+                  <Square className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    setShowActionMenu(false);
+                    handleSendMessage();
+                  }}
+                  disabled={(!inputValue.trim() && !selectedImage) || isUploadingImage}
+                  size="sm"
+                  className="h-9 w-9 p-0 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: (!inputValue.trim() && !selectedImage) || isUploadingImage
+                      ? 'rgba(255, 255, 255, 0.1)'
+                      : `linear-gradient(135deg, ${getCurrentTheme().primaryColor}, ${getCurrentTheme().secondaryColor})`,
+                    border: 'none',
+                    color: 'white'
+                  }}
+                  aria-label="Send message"
+                >
+                  {isUploadingImage ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
               </div>
             </div>
           </div>

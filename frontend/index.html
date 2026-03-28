@@ -5,6 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/logo-infinity-a.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Adiva AI</title>
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem('chatAI_theme') || 'ocean';
+          document.documentElement.classList.add('theme-' + theme);
+          document.body.classList.add('theme-' + theme);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

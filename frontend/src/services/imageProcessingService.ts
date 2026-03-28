@@ -6,6 +6,7 @@ interface ImageProcessingRequest {
   systemPrompt: string;
   conversationId: string;
   modelId: string;
+  signal?: AbortSignal;
 }
 
 interface ImageProcessingResponse {
@@ -47,6 +48,7 @@ export class ImageProcessingService {
         headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
         credentials: 'include',
         body: formData,
+        signal: request.signal,
       });
 
       console.log('📡 Image processing response status:', response.status);
@@ -104,6 +106,7 @@ export class ImageProcessingService {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         credentials: 'include',
+        signal: request.signal,
         body: JSON.stringify({
           message: fullPrompt,
           systemPrompt: request.systemPrompt,

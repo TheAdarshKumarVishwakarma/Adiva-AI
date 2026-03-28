@@ -23,6 +23,7 @@ import { useSidebarChats } from '@/features/chat/hooks/useSidebarChats';
 import ChatMessageList from '@/features/chat/components/ChatMessageList';
 import ChatComposer from '@/features/chat/components/ChatComposer';
 import LogoMark from '@/shared/components/LogoMark';
+import LogoLoader from '@/shared/components/LogoLoader';
 
 // =====================
 // Component
@@ -105,8 +106,20 @@ function AIchat({
   const [interfaceLanguage, setInterfaceLanguage] = useState<string>('en-US');
   const [speechLanguage, setSpeechLanguage] = useState<string>('en-US');
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
-  const [selectedTheme, setSelectedTheme] = useState<string>('ocean');
-  const [sidebarThemeEnabled, setSidebarThemeEnabled] = useState<boolean>(false);
+  const [selectedTheme, setSelectedTheme] = useState<string>(() => {
+    try {
+      return localStorage.getItem('chatAI_theme') || 'ocean';
+    } catch {
+      return 'ocean';
+    }
+  });
+  const [sidebarThemeEnabled, setSidebarThemeEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('chatAI_sidebarTheme') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [editingMessage, setEditingMessage] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>('');
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
@@ -137,6 +150,7 @@ function AIchat({
   const [toolInput, setToolInput] = useState('');
   const [isRunningTool, setIsRunningTool] = useState(false);
   const [toolPermissions, setToolPermissions] = useState<ToolPermissions>(DEFAULT_TOOL_PERMISSIONS);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const settingsLoadedRef = useRef(false);
   const settingsSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -184,6 +198,8 @@ function AIchat({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatAIRef = useRef<HTMLDivElement>(null);
   const prevAuthRef = useRef<boolean>(isAuthenticated);
+  const generationIdRef = useRef(0);
+  const imageAbortRef = useRef<AbortController | null>(null);
 
   // =====================
   // Helpers: UI
@@ -614,11 +630,25 @@ function AIchat({
   useEffect(() => {
     const authToken = getAuthToken();
     if (authToken && isAuthenticated) {
-      fetchUserSettings(authToken);
-      fetchUserChats(authToken);
-      fetchUserAnalytics(authToken);
+      loadCachedChats();
+      setIsSyncing(true);
+      const preferredChatId = (() => {
+        try {
+          return localStorage.getItem('chatAI_lastChatId') || undefined;
+        } catch {
+          return undefined;
+        }
+      })();
+      Promise.allSettled([
+        fetchUserSettings(authToken),
+        fetchUserChats(authToken, preferredChatId),
+        fetchUserAnalytics(authToken)
+      ]).finally(() => {
+        setIsSyncing(false);
+      });
     } else {
       loadCachedChats();
+      setIsSyncing(false);
     }
   }, [isAuthenticated, token]);
 
@@ -963,9 +993,29 @@ function AIchat({
     }
   };
 
+  const stopGeneration = () => {
+    generationIdRef.current += 1;
+    if (imageAbortRef.current) {
+      imageAbortRef.current.abort();
+      imageAbortRef.current = null;
+      setUploadingImage(false);
+    }
+    setIsTyping(false);
+    setRegeneratingMessageId(null);
+    setMessages((prev) => {
+      const next = [...prev];
+      const lastMessage = next[next.length - 1];
+      if (lastMessage && lastMessage.sender === 'AI' && lastMessage.isStreaming) {
+        lastMessage.isStreaming = false;
+      }
+      return next;
+    });
+  };
+
   const handleSendMessage = async () => {
     stopSpeaking();
     if (!inputValue.trim() && !selectedImage) return;
+    const generationId = (generationIdRef.current += 1);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -1034,12 +1084,19 @@ function AIchat({
     if (selectedImage) {
       console.log('🔄 Starting image processing...');
       setUploadingImage(true);
+      const abortController = new AbortController();
+      imageAbortRef.current = abortController;
 
       // Add a small delay to ensure the loader shows
       await new Promise(resolve => setTimeout(resolve, 100));
 
       try {
-        const response = await generateResponseWithImage(inputValue || 'What do you see in this image?', selectedImage);
+        const response = await generateResponseWithImage(
+          inputValue || 'What do you see in this image?',
+          selectedImage,
+          { signal: abortController.signal }
+        );
+        if (generationId !== generationIdRef.current) return;
         responseText = response.text;
         responseMeta = response.meta;
         responseConversationId = response.conversationId;
@@ -1061,6 +1118,8 @@ function AIchat({
           setCurrentChatId(response.conversationId);
         }
       } catch (error) {
+        const isAbort = (error as { name?: string } | null)?.name === 'AbortError';
+        if (isAbort) return;
         console.error('❌ Error processing image:', error);
         responseText = 'Sorry, I encountered an error while processing the image. Please try again.';
         responseMeta = {
@@ -1084,13 +1143,19 @@ function AIchat({
       } finally {
         console.log('🔄 Finishing image processing...');
         setUploadingImage(false);
-        resetImage(); // Clear the image after processing
+        if (imageAbortRef.current === abortController) {
+          imageAbortRef.current = null;
+        }
+        if (!abortController.signal.aborted && generationId === generationIdRef.current) {
+          resetImage(); // Clear the image after processing
+        }
       }
     } else {
       // Handle text only with streaming
       try {
         console.log('🔄 Starting text response generation...');
         const { text, meta } = await generateResponse(userMessage.text);
+        if (generationId !== generationIdRef.current) return;
         console.log('✅ Generated response text length:', text ? text.length : 0);
         console.log('✅ Generated response preview:', text ? text.substring(0, 200) + '...' : 'EMPTY');
 
@@ -1138,11 +1203,13 @@ function AIchat({
       }
     }
 
-    updateAnalytics(responseText, 'AI');
-    setIsTyping(false);
+    if (generationId === generationIdRef.current) {
+      updateAnalytics(responseText, 'AI');
+      setIsTyping(false);
+    }
 
     const authToken = getAuthToken();
-    if (authToken && isAuthenticated) {
+    if (authToken && isAuthenticated && generationId === generationIdRef.current) {
       fetchUserChats(authToken, responseConversationId || currentChatId);
       fetchUserAnalytics(authToken);
     }
@@ -1443,6 +1510,7 @@ function AIchat({
   };
 
   const regenerateMessage = async (messageId: string) => {
+    const generationId = (generationIdRef.current += 1);
     stopSpeaking();
     const messageIndex = messages.findIndex(m => m.id === messageId);
     if (messageIndex === -1) return;
@@ -1468,6 +1536,7 @@ function AIchat({
 
     try {
       const { text, meta } = await generateResponse(userMessage.text, { regenerate: true });
+      if (generationId !== generationIdRef.current) return;
       const nextText = extractPlainAnswer(text as string);
       const existingVersions = Array.isArray(message.responseVersions) ? message.responseVersions : [message.text];
       persistResponseVersion(currentChatId, messageId, nextText, existingVersions);
@@ -1498,7 +1567,9 @@ function AIchat({
       if (safeText) {
         updateMessageOnBackend(messageId, safeText);
       }
-      updateAnalytics(text as string, 'AI');
+      if (generationId === generationIdRef.current) {
+        updateAnalytics(text as string, 'AI');
+      }
     } catch (error) {
       console.error('Failed to regenerate message:', error);
       setMessages(prev => prev.map(m =>
@@ -1601,6 +1672,14 @@ function AIchat({
             </div>
           </div>
         </div>
+        {isSyncing && (
+          <div className="px-4 sm:px-6 -mt-2 mb-2 flex justify-end">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] text-blue-100 backdrop-blur-md">
+              <LogoLoader sizeClassName="h-3.5 w-3.5" />
+              <span>Syncing…</span>
+            </div>
+          </div>
+        )}
 
         {/* Model Selector Dropdown */}
         {showModelSelector && (
@@ -2048,6 +2127,7 @@ function AIchat({
           startVoiceInput={startVoiceInput}
           stopVoiceInput={stopVoiceInput}
           handleSendMessage={handleSendMessage}
+          stopGeneration={stopGeneration}
         />
 
         {portalTarget && showTemplateLibrary && createPortal((

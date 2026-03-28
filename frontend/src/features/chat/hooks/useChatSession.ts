@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { chatApi } from '@/features/chat/api/chatApi';
 import type { Analytics, ChatSession, Message } from '@/features/chat/types/chat';
@@ -57,7 +57,13 @@ export const useChatSession = ({
   createWelcomeMessage
 }: UseChatSessionParams) => {
   const [recentChats, setRecentChats] = useState<ChatSession[]>([]);
-  const [currentChatId, setCurrentChatId] = useState<string>(() => `chat_${Date.now()}`);
+  const [currentChatId, setCurrentChatId] = useState<string>(() => {
+    try {
+      return localStorage.getItem('chatAI_lastChatId') || `chat_${Date.now()}`;
+    } catch {
+      return `chat_${Date.now()}`;
+    }
+  });
 
   const getAuthToken = () => token || localStorage.getItem('token');
 
@@ -81,6 +87,14 @@ export const useChatSession = ({
       // ignore cache write errors
     }
   };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('chatAI_lastChatId', currentChatId);
+    } catch {
+      // ignore cache write errors
+    }
+  }, [currentChatId]);
 
   const fetchUserChats = async (authToken: string, preferredConversationId?: string) => {
     try {
