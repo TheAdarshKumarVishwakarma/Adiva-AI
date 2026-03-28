@@ -214,13 +214,12 @@ export default function ChatMessageList({
                           <>
                             <MarkdownRenderer content={visibleText} isStreaming={m.isStreaming} />
                             {m.isStreaming && isRegeneratingThisMessage && (
-                              <div className="mt-3 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2">
-                                <div className="flex items-center gap-2 text-cyan-200 text-xs font-medium">
-                                  <LogoLoader sizeClassName="h-3.5 w-3.5" />
-                                  Regenerating response...
-                                </div>
-                                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                                  <div className="regen-progress-fill h-full rounded-full bg-cyan-300/80"></div>
+                              <div className="mt-3 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/5 px-3 py-2 text-xs text-blue-100 backdrop-blur-md">
+                                <LogoLoader sizeClassName="h-3.5 w-3.5" />
+                                <span className="font-medium">Regenerating</span>
+                                <span className="loading-dots text-blue-200"> </span>
+                                <div className="ml-2 h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
+                                  <div className="regen-progress-fill h-full rounded-full bg-gradient-to-r from-cyan-300/80 to-blue-300/80"></div>
                                 </div>
                               </div>
                             )}

@@ -229,7 +229,7 @@ export const useAiResponse = ({
       return `\`\`\`${lang}\n${code}\n\`\`\``;
     };
 
-    const codingPrompt = `You are an expert programming assistant. Respond like ChatGPT:\n\n- Start with a short summary of the approach (1-3 sentences).\n- Provide the complete working code in a single code block with syntax highlighting.\n- Add a brief, practical explanation after the code.\n- Include usage only if it helps clarity. Keep it short.\n- Keep explanations concise unless the user asks for more detail.\n\nUser Request: ${userMessage}`;
+    const codingPrompt = `You are an expert programming assistant. Respond like ChatGPT:\n\n- Start with a short summary of the approach (1-3 sentences).\n- Provide the complete working code in a single code block with syntax highlighting.\n- Add a structured explanation after the code using headings like **How it works**, **Complexity**, **Notes**.\n- Include usage only if it helps clarity. Keep it short.\n- Use tasteful section icons/emojis (2-4 total) as cues, not on every line.\n\nUser Request: ${userMessage}`;
 
     try {
       const response = await callAIJSON(codingPrompt, userMessage, userMessage, false, regenerate);
@@ -346,14 +346,19 @@ export const useAiResponse = ({
     };
   };
 
-  const generateResponseWithImage = async (userMessage: string, imageFile: File) => {
+  const generateResponseWithImage = async (
+    userMessage: string,
+    imageFile: File,
+    options?: { signal?: AbortSignal }
+  ) => {
     try {
       const response = await ImageProcessingService.processImage({
         image: imageFile,
         message: userMessage,
         systemPrompt: buildSystemPrompt(personality),
         conversationId: currentChatId,
-        modelId: selectedModel
+        modelId: selectedModel,
+        signal: options?.signal
       });
 
       return {
