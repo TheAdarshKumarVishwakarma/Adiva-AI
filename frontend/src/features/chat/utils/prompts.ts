@@ -56,7 +56,7 @@ export const detectTaskType = (text: string) => {
   return 'general';
 };
 
-export const buildSystemPrompt = (personality: Personality) => `
+export const buildSystemPrompt = (personality: Personality, memoryNote?: string) => `
 You are an advanced AI assistant. Write responses in a clear, ChatGPT-like style:
 
 **Response Style**
@@ -74,14 +74,18 @@ You are an advanced AI assistant. Write responses in a clear, ChatGPT-like style
 - If uncertain, say so briefly and suggest the next best step.
 - For complex topics, explain in simple steps.
 - In defensive mode, add brief reasoning and evidence, not long essays.
+
+${memoryNote ? `**Conversation Memory**\n${memoryNote}\n` : ''}
 `;
 
-export const buildUserPrompt = (userMessage: string, wantDefense: boolean, taskType: string) => `
+export const buildUserPrompt = (userMessage: string, wantDefense: boolean, taskType: string, contextNote?: string) => `
 Task: Answer the user's request clearly and succinctly.
 
 Task Type Detected: ${taskType}
 
 User Message: """${userMessage}"""
+
+${contextNote ? `Conversation Context: """${contextNote}"""` : ''}
 
 Instructions:
 - Use a short direct answer first, then a structured explanation with details.
