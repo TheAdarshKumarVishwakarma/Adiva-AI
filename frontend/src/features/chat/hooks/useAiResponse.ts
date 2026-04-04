@@ -271,7 +271,10 @@ export const useAiResponse = ({
     }
   };
 
-  const generateResponse = async (userMessage: string, options?: { regenerate?: boolean }) => {
+  const generateResponse = async (
+    userMessage: string,
+    options?: { regenerate?: boolean; memoryNote?: string; contextNote?: string }
+  ) => {
     const regenerate = options?.regenerate === true;
     const wantDefense = defensiveMode || detectChallenge(userMessage);
     const taskType = detectTaskType(userMessage);
@@ -280,8 +283,8 @@ export const useAiResponse = ({
       return await generateCodingResponse(userMessage, wantDefense, taskType, { regenerate });
     }
 
-    const sys = buildSystemPrompt(personality);
-    const u1 = buildUserPrompt(userMessage, wantDefense, taskType);
+    const sys = buildSystemPrompt(personality, options?.memoryNote);
+    const u1 = buildUserPrompt(userMessage, wantDefense, taskType, options?.contextNote);
 
     const raw1 = await callAIJSON(sys, u1, userMessage, false, regenerate);
 
@@ -349,13 +352,13 @@ export const useAiResponse = ({
   const generateResponseWithImage = async (
     userMessage: string,
     imageFile: File,
-    options?: { signal?: AbortSignal }
+    options?: { signal?: AbortSignal; memoryNote?: string }
   ) => {
     try {
       const response = await ImageProcessingService.processImage({
         image: imageFile,
         message: userMessage,
-        systemPrompt: buildSystemPrompt(personality),
+        systemPrompt: buildSystemPrompt(personality, options?.memoryNote),
         conversationId: currentChatId,
         modelId: selectedModel,
         signal: options?.signal

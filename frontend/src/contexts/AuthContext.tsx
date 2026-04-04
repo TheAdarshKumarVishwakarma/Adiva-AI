@@ -31,9 +31,21 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const SESSION_TTL_MS = 2 * 60 * 1000;
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState(true);
+  const logoutTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearClientSession = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('auth_expires_at');
+    localStorage.removeItem('chatAI_recentChats');
+    localStorage.removeItem('chatAI_lastChatId');
+    localStorage.removeItem('chatAI_responseHistory');
+    localStorage.removeItem('chatAI_analytics');
+    localStorage.removeItem('chatAI_theme');
+    localStorage.removeItem('chatAI_sidebarTheme');
+  };
 
   // Treat presence of a token as authenticated during hydration to avoid guest-UI flicker on refresh.
   const isAuthenticated = !!token;
@@ -43,6 +55,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkAuth = async () => {
       try {
         const storedToken = localStorage.getItem('token');
+        const storedExpiry = localStorage.getItem('auth_expires_at');
+        if (storedExpiry && Date.now() > Number(storedExpiry)) {
+          clearClientSession();
+          setToken(null);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
         if (storedToken) {
           // Verify token by fetching user profile
           const response = await fetch(`${API_BASE_URL}/auth/me`, {
@@ -56,15 +76,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const data = await response.json();
             setToken(storedToken);
             setUser(data.data.user);
+            if (!storedExpiry) {
+              localStorage.setItem('auth_expires_at', String(Date.now() + SESSION_TTL_MS));
+            }
           } else {
             // Token is invalid, clear it
-            localStorage.removeItem('token');
+            clearClientSession();
             setToken(null);
           }
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        localStorage.removeItem('token');
+        clearClientSession();
         setToken(null);
       } finally {
         setIsLoading(false);
@@ -73,6 +96,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (logoutTimerRef.current) {
+      clearTimeout(logoutTimerRef.current);
+      logoutTimerRef.current = null;
+    }
+    if (!token) return;
+
+    const storedExpiry = localStorage.getItem('auth_expires_at');
+    const expiresAt = storedExpiry ? Number(storedExpiry) : Date.now() + SESSION_TTL_MS;
+    if (!storedExpiry) {
+      localStorage.setItem('auth_expires_at', String(expiresAt));
+    }
+
+    const remainingMs = Math.max(0, expiresAt - Date.now());
+    logoutTimerRef.current = setTimeout(() => {
+      setUser(null);
+      setToken(null);
+      clearClientSession();
+    }, remainingMs);
+  }, [token]);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
     try {
@@ -91,6 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.data.user);
         setToken(data.data.token);
         localStorage.setItem('token', data.data.token);
+        localStorage.setItem('auth_expires_at', String(Date.now() + SESSION_TTL_MS));
         return { success: true, message: 'Login successful!' };
       } else {
         return { success: false, message: data.message || 'Login failed' };
@@ -120,6 +165,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.data.user);
         setToken(data.data.token);
         localStorage.setItem('token', data.data.token);
+        localStorage.setItem('auth_expires_at', String(Date.now() + SESSION_TTL_MS));
         return { success: true, message: 'Registration successful!' };
       } else {
         return { success: false, message: data.message || 'Registration failed' };
@@ -135,7 +181,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('token');
+    clearClientSession();
     
     // Call logout endpoint to clear server-side session
     fetch(`${API_BASE_URL}/auth/logout`, {
@@ -210,6 +256,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setToken(token);
       localStorage.setItem('token', token);
+      localStorage.setItem('auth_expires_at', String(Date.now() + SESSION_TTL_MS));
       
       // Fetch user profile with the token
       const response = await fetch(`${API_BASE_URL}/auth/me`, {
@@ -229,7 +276,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Login with token error:', error);
       setToken(null);
       setUser(null);
-      localStorage.removeItem('token');
+      clearClientSession();
       throw error;
     }
   };

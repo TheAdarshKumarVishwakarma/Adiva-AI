@@ -89,7 +89,7 @@ function AIchat({
   onSidebarThemeChange,
   onThemeChange
 }: AIchatProps) {
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
   // UI state
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([createWelcomeMessage()]);
@@ -154,6 +154,7 @@ function AIchat({
   const [isInitialized, setIsInitialized] = useState(false);
   const settingsLoadedRef = useRef(false);
   const settingsSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userLastChatKey = user?.id ? `chatAI_lastChatId_${user.id}` : null;
 
   // Image processing
   const {
@@ -165,6 +166,7 @@ function AIchat({
     setUploading: setUploadingImage,
     reset: resetImage
   } = useImageProcessing();
+  const lastImageRef = useRef<File | null>(null);
 
   // Image preview popup state
   const [showImagePopup, setShowImagePopup] = useState(false);
@@ -634,6 +636,9 @@ function AIchat({
       setIsSyncing(true);
       const preferredChatId = (() => {
         try {
+          if (userLastChatKey) {
+            return localStorage.getItem(userLastChatKey) || localStorage.getItem('chatAI_lastChatId') || undefined;
+          }
           return localStorage.getItem('chatAI_lastChatId') || undefined;
         } catch {
           return undefined;
@@ -651,6 +656,15 @@ function AIchat({
       setIsSyncing(false);
     }
   }, [isAuthenticated, token]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !userLastChatKey) return;
+    try {
+      localStorage.setItem(userLastChatKey, currentChatId);
+    } catch {
+      // ignore localStorage write errors
+    }
+  }, [currentChatId, isAuthenticated, userLastChatKey]);
 
   // Detect user's preferred language from browser
   useEffect(() => {
@@ -993,6 +1007,47 @@ function AIchat({
     }
   };
 
+  const shouldReuseLastImage = (text: string) => {
+    const t = text.toLowerCase();
+    const triggers = [
+      'image', 'photo', 'picture', 'this', 'that', 'above', 'previous', 'earlier', 'again', 'same'
+    ];
+    return triggers.some((w) => t.includes(w));
+  };
+
+  const truncateLine = (value: string, max = 160) => {
+    const trimmed = value.trim().replace(/\s+/g, ' ');
+    if (trimmed.length <= max) return trimmed;
+    return `${trimmed.slice(0, max)}...`;
+  };
+
+  const buildCurrentChatContext = (chatMessages: Message[]) => {
+    const recent = chatMessages.slice(-20);
+    if (!recent.length) return '';
+    const lines = recent.map((msg) => {
+      const role = msg.sender === 'user' ? 'User' : 'Assistant';
+      return `${role}: ${truncateLine(msg.text || '')}`;
+    });
+    return `Current chat summary:\n${lines.join('\n')}`;
+  };
+
+  const buildGlobalMemory = () => {
+    const otherChats = recentChats
+      .filter((c) => c.id !== currentChatId && c.conversationId !== currentChatId)
+      .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime())
+      .slice(0, 6);
+
+    if (!otherChats.length) return '';
+    const blocks = otherChats.map((chat) => {
+      const lastUser = [...chat.messages].reverse().find((m) => m.sender === 'user');
+      const lastAI = [...chat.messages].reverse().find((m) => m.sender === 'AI');
+      const userLine = lastUser ? `User asked: ${truncateLine(lastUser.text || '', 240)}` : 'User asked: (none)';
+      const aiLine = lastAI ? `Assistant replied: ${truncateLine(lastAI.text || '', 240)}` : 'Assistant replied: (none)';
+      return `Chat "${truncateLine(chat.title || 'Untitled', 80)}":\n${userLine}\n${aiLine}`;
+    });
+    return `Global memory (recent chats):\n${blocks.join('\n\n')}`;
+  };
+
   const stopGeneration = () => {
     generationIdRef.current += 1;
     if (imageAbortRef.current) {
@@ -1014,8 +1069,10 @@ function AIchat({
 
   const handleSendMessage = async () => {
     stopSpeaking();
-    if (!inputValue.trim() && !selectedImage) return;
+    if (!inputValue.trim() && !selectedImage && !lastImageRef.current) return;
     const generationId = (generationIdRef.current += 1);
+    const reuseLastImage = !selectedImage && !!lastImageRef.current && shouldReuseLastImage(inputValue);
+    const effectiveImage = selectedImage || (reuseLastImage ? lastImageRef.current : null);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -1031,6 +1088,11 @@ function AIchat({
     updateAnalytics(inputValue, 'user');
     setInputValue('');
     setIsTyping(true);
+
+    const currentContextNote = buildCurrentChatContext(updatedMessages);
+    const globalMemoryNote = buildGlobalMemory();
+    const imageContextNote = lastImageRef.current ? 'User previously uploaded an image in this chat.' : '';
+    const memoryNote = [currentContextNote, globalMemoryNote, imageContextNote].filter(Boolean).join('\n\n');
 
     // Save chat immediately with the updated messages
     if (isInitialized && !isAuthenticated) {
@@ -1081,11 +1143,14 @@ function AIchat({
     setMessages((prev) => [...prev, AIMessage]);
 
     // Handle image + text or image only
-    if (selectedImage) {
+    if (effectiveImage) {
       console.log('🔄 Starting image processing...');
       setUploadingImage(true);
       const abortController = new AbortController();
       imageAbortRef.current = abortController;
+      if (selectedImage) {
+        lastImageRef.current = selectedImage;
+      }
 
       // Add a small delay to ensure the loader shows
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -1093,8 +1158,8 @@ function AIchat({
       try {
         const response = await generateResponseWithImage(
           inputValue || 'What do you see in this image?',
-          selectedImage,
-          { signal: abortController.signal }
+          effectiveImage,
+          { signal: abortController.signal, memoryNote }
         );
         if (generationId !== generationIdRef.current) return;
         responseText = response.text;
@@ -1146,7 +1211,7 @@ function AIchat({
         if (imageAbortRef.current === abortController) {
           imageAbortRef.current = null;
         }
-        if (!abortController.signal.aborted && generationId === generationIdRef.current) {
+        if (!abortController.signal.aborted && generationId === generationIdRef.current && selectedImage) {
           resetImage(); // Clear the image after processing
         }
       }
@@ -1154,7 +1219,7 @@ function AIchat({
       // Handle text only with streaming
       try {
         console.log('🔄 Starting text response generation...');
-        const { text, meta } = await generateResponse(userMessage.text);
+        const { text, meta } = await generateResponse(userMessage.text, { memoryNote, contextNote: currentContextNote });
         if (generationId !== generationIdRef.current) return;
         console.log('✅ Generated response text length:', text ? text.length : 0);
         console.log('✅ Generated response preview:', text ? text.substring(0, 200) + '...' : 'EMPTY');
@@ -1224,6 +1289,11 @@ function AIchat({
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleImageRemoveWithMemory = () => {
+    lastImageRef.current = null;
+    handleImageRemove();
   };
 
   // Keyboard shortcuts
@@ -1526,6 +1596,10 @@ function AIchat({
 
     setRegeneratingMessageId(messageId);
     setIsTyping(true);
+    const currentContextNote = buildCurrentChatContext(messages);
+    const globalMemoryNote = buildGlobalMemory();
+    const imageContextNote = lastImageRef.current ? 'User previously uploaded an image in this chat.' : '';
+    const memoryNote = [currentContextNote, globalMemoryNote, imageContextNote].filter(Boolean).join('\n\n');
 
     // Keep existing response visible while new regeneration is in progress
     setMessages(prev => prev.map(m =>
@@ -1535,7 +1609,11 @@ function AIchat({
     ));
 
     try {
-      const { text, meta } = await generateResponse(userMessage.text, { regenerate: true });
+      const { text, meta } = await generateResponse(userMessage.text, {
+        regenerate: true,
+        memoryNote,
+        contextNote: currentContextNote
+      });
       if (generationId !== generationIdRef.current) return;
       const nextText = extractPlainAnswer(text as string);
       const existingVersions = Array.isArray(message.responseVersions) ? message.responseVersions : [message.text];
@@ -2120,7 +2198,7 @@ function AIchat({
           openPromptTemplates={() => setShowTemplateLibrary(true)}
           openToolActions={() => setShowToolActions(true)}
           setShowImagePopup={setShowImagePopup}
-          handleImageRemove={handleImageRemove}
+          handleImageRemove={handleImageRemoveWithMemory}
           handleImageSelect={handleImageSelect}
           handleKeyPress={handleKeyPress}
           toggleVoiceInput={toggleVoiceInput}
